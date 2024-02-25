@@ -43,10 +43,10 @@ namespace FTrees
         /// O(log n)
         public T this[int idx] {
             get {
-                if (idx == 0) return Head;
-                if (idx == Count - 1) return Last;
                 if (idx < 0) throw new IndexOutOfRangeException();
                 if (idx >= Count) throw new IndexOutOfRangeException();
+                if (idx == 0) return Head;
+                if (idx == Count - 1) return Last;
                 return backing.LookupTree(s => idx < s.Value, default).Value.Value;
             }
         }

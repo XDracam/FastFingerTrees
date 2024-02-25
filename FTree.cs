@@ -266,12 +266,10 @@ namespace FTrees
                 var vm = vpr.Add(m.Value.Measure());
                 if (p(vm)) {
                     var (ml, xs) = m.Value.LookupTree(p, vpr);
-                    var (l, x) = lookupDigit(p, vpr.Add(ml), xs.ToDigit());
-                    return (vpr.Add(ml).Add(l), x);
+                    return lookupDigit(p, ml, xs.ToDigit());
                 }
                 else {
-                    var (l, x) = lookupDigit(p, vm, sf);
-                    return (vm.Add(l), x);
+                    return lookupDigit(p, vm, sf);
                 }
             }
             throw new NotImplementedException();
@@ -280,8 +278,9 @@ namespace FTrees
                 if (digit.Values.Length == 1)
                     return new(i, digit.Head);
                 for (var idx = 0; idx < digit.Values.Length; ++idx) {
-                    i = i.Add(digit.Values[idx].Measure);
-                    if (p(i)) return (i, digit.Values[idx]);
+                    var newI = i.Add(digit.Values[idx].Measure);
+                    if (p(newI)) return (i, digit.Values[idx]);
+                    i = newI;
                 }
                 return (i, digit.Last);
             }
