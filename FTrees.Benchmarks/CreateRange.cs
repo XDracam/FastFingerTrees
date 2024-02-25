@@ -7,7 +7,7 @@ namespace FTrees.Benchmarks {
         
         private int[] testData;
 
-        [Params(100, 1000, 10000, 100000)]
+        [Params(100, 1000, 10000, 30000)]
         public int Count;
 
         [GlobalSetup]

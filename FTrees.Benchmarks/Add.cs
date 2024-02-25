@@ -5,7 +5,7 @@ using BenchmarkDotNet.Attributes;
 namespace FTrees.Benchmarks {
     public class Add {
 
-        [Params(100, 1000, 10000, 100000)]
+        [Params(100, 1000, 10000, 30000)]
         public int Count;
 
         [GlobalSetup]

@@ -158,6 +158,7 @@
     <Compile Include="Add.cs" />
     <Compile Include="CreateRange.cs" />
     <Compile Include="Enumerate.cs" />
+    <Compile Include="Index.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>

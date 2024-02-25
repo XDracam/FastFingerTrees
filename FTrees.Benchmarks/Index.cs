@@ -4,8 +4,7 @@ using System.Linq;
 using BenchmarkDotNet.Attributes;
 
 namespace FTrees.Benchmarks {
-    public class Enumerate {
-        
+    public class Index {
         private List<int> list;
         private ImmutableArray<int> immutableArray;
         private ImmutableList<int> immutableList;
@@ -22,31 +21,33 @@ namespace FTrees.Benchmarks {
             immutableArray = ImmutableArray.CreateRange(range);
             immutableList = ImmutableList.CreateRange(range);
             immutableSeq = ImmutableSeq.CreateRange(range);
-
         }
         
         [Benchmark]
-        public void ListEnumerate()
-        {
-            foreach (var item in list) { }
+        public void ListIndex() {
+            for (var i = 0; i < Count; ++i)
+                _ = list[i];
         }
         
         [Benchmark]
-        public void ImmutableArrayEnumerate()
+        public void ImmutableArrayIndex()
         {
-            foreach (var item in immutableArray) { }
+            for (var i = 0; i < Count; ++i)
+                _ = immutableArray[i];
         }
         
         [Benchmark]
-        public void ImmutableListEnumerate()
+        public void ImmutableListIndex()
         {
-            foreach (var item in immutableList) { }
+            for (var i = 0; i < Count; ++i)
+                _ = immutableList[i];
         }
         
         [Benchmark]
-        public void ImmutableSeqEnumerate()
+        public void ImmutableSeqIndex()
         {
-            foreach (var item in immutableSeq) { }
+            for (var i = 0; i < Count; ++i)
+                _ = immutableSeq[i];
         }
     }
 }

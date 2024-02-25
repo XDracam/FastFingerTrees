@@ -7,6 +7,7 @@ namespace FTrees.Benchmarks {
             Run<Add>();
             Run<CreateRange>();
             Run<Enumerate>();
+            Run<Index>();
         }
 
         private static void Run<T>() {
