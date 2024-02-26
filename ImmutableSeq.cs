@@ -47,7 +47,9 @@ namespace FTrees
                 if (idx >= Count) throw new IndexOutOfRangeException();
                 if (idx == 0) return Head;
                 if (idx == Count - 1) return Last;
-                return backing.LookupTree(s => idx < s.Value, default).Value.Value;
+                
+                Size i = default;
+                return backing.LookupTree(s => idx < s.Value, ref i).Value;
             }
         }
 

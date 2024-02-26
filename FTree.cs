@@ -255,34 +255,47 @@ namespace FTrees
         
         // guaranteed to be O(logn)
         // like SplitTree, but doesn't generate unnecessary new trees
-        public (V Measure, T Value) LookupTree(Func<V, bool> p, V i) {
+        public ref readonly T LookupTree(Func<V, bool> p, ref V i) {
+            return ref lookupTree(p, ref i);
+        }
+
+        private ref readonly T lookupTree(Func<V, bool> p, ref V i) {
             if (this is EmptyT) throw new InvalidOperationException();
-            if (this is Single(var s)) return new(i, s);
+            if (this is Single s) return ref s.Value;
             if (this is Deep(var pr, var m, var sf)) {
                 var vpr = i.Add(pr.measure<T, V>());
                 if (p(vpr)) {
-                    return lookupDigit(p, i, pr);
+                    return ref lookupDigit(p, i, pr.Values);
                 }
                 var vm = vpr.Add(m.Value.Measure());
                 if (p(vm)) {
-                    var (ml, xs) = m.Value.LookupTree(p, vpr);
-                    return lookupDigit(p, ml, xs.ToDigit());
+                    var xs = m.Value.lookupTree(p, ref vpr);
+                    return ref lookupNode(p, vpr, xs); // vpr increased by tree lookup
                 }
                 else {
-                    return lookupDigit(p, vm, sf);
+                    return ref lookupDigit(p, vm, sf.Values);
                 }
             }
             throw new NotImplementedException();
+            
+            static ref readonly T lookupNode(Func<V, bool> p, V i, Node<T, V> node) {
+                var i1 = i.Add(node.First.Measure);
+                if (p(i1)) return ref node.First;
+                var i2 = i1.Add(node.Second.Measure);
+                if (p(i2) || !node.HasThird) 
+                    return ref node.Second;
+                return ref node.Third;
+            }
                 
-            static (V LeftMeasure, T) lookupDigit(Func<V, bool> p, V i, Digit<T> digit) {
-                if (digit.Values.Length == 1)
-                    return new(i, digit.Head);
-                for (var idx = 0; idx < digit.Values.Length; ++idx) {
-                    var newI = i.Add(digit.Values[idx].Measure);
-                    if (p(newI)) return (i, digit.Values[idx]);
+            static ref readonly T lookupDigit(Func<V, bool> p, V i, T[] digit) {
+                if (digit.Length == 1)
+                    return ref digit[0];
+                for (var idx = 0; idx < digit.Length; ++idx) {
+                    var newI = i.Add(digit[idx].Measure);
+                    if (p(newI)) return ref digit[idx];
                     i = newI;
                 }
-                return (i, digit.Last);
+                return ref digit[digit.Length - 1];
             }
         }
 
@@ -462,7 +475,7 @@ namespace FTrees
     public interface Measure<TSelf> { TSelf Add(TSelf other); }
     public interface Measured<out V> where V : Measure<V>, new() { V Measure { get; } }
     
-    internal readonly struct Node<T, V> : Measured<V> where T : Measured<V> where V : Measure<V>, new()
+    internal sealed class Node<T, V> : Measured<V> where T : Measured<V> where V : Measure<V>, new()
     {
         public readonly bool HasThird;
         public V Measure { get; }

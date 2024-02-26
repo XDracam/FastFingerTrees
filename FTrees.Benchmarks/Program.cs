@@ -4,9 +4,9 @@ using BenchmarkDotNet.Running;
 namespace FTrees.Benchmarks {
     public static class Program {
         public static void Main(string[] args) {
-            Run<Add>();
+            //Run<Add>();
             Run<CreateRange>();
-            Run<Enumerate>();
+            //Run<Enumerate>();
             Run<Index>();
         }
 
