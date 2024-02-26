@@ -82,10 +82,9 @@ namespace FTrees
         public ImmutableSeq<T> AddRange(IEnumerable<T> items) {
             if (items is ImmutableSeq<T> seq) 
                 return new(backing.Concat(seq.backing)); // O(1)
-            var res = backing;
-            foreach (var item in items) 
-                res = res.Append(new(item));
-            return new(res);
+            
+            var otherTree = FTree<SeqElem<T>, Size>.CreateRange(items.Select(x => new SeqElem<T>(x)));
+            return new(backing.Concat(otherTree));
         }
 
         /// O(log n), or amortized O(1) if appending or prepending
@@ -101,7 +100,7 @@ namespace FTrees
             var (l, r) = splitAt(index);
             var middle = items is ImmutableSeq<T> seq 
                 ? seq.backing 
-                : FTree<SeqElem<T>, Size>.CreateRange(items.Select(i => new SeqElem<T>(i)), isLazy: true);
+                : FTree<SeqElem<T>, Size>.CreateRange(items.Select(i => new SeqElem<T>(i)));
             return new(l.Concat(middle).Concat(r));
         }
 
@@ -233,7 +232,7 @@ namespace FTrees
 #endregion
     }
     
-    internal readonly struct Size : Measure<Size>
+    internal readonly struct Size : Measure<Size>, IComparable<Size>
     {
         public readonly int Value;
         public Size(int value) => Value = value;

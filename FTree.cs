@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace FTrees
 {
@@ -122,12 +123,45 @@ namespace FTrees
 
         public static FTree<T, V> Create(params T[] values) => CreateRange(values);
         
-        public static FTree<T, V> CreateRange(IEnumerable<T> values, bool isLazy = false) {
-            // TODO: this is slow
-            FTree<T, V> res = EmptyT.Instance;
-            foreach (var x in values) 
-                res = res.Append(x, isLazy: false);
-            return res;
+        public static FTree<T, V> CreateRange(IEnumerable<T> values) =>
+            createRangeOptimized(values as T[] ?? values.ToArray());
+        
+        private static FTree<T, V> createRangeOptimized(T[] array) {
+            var length = array.Length;
+            switch (length) {
+                case 0:
+                    return EmptyT.Instance;
+                case 1:
+                    return new Single(array[0]);
+                case <= 8:
+                    // Create a digit directly if possible
+                    var firstDigitLength = length / 2;
+                    var secondDigitLength = length - firstDigitLength;
+                    return new Deep(
+                        new Digit<T>(subRangeOf(array, 0, firstDigitLength)), 
+                        new LazyThunk<FTree<Node<T, V>, V>>(() => FTree<Node<T, V>, V>.EmptyT.Instance), 
+                        new Digit<T>(subRangeOf(array, 0 + firstDigitLength, secondDigitLength))
+                    );
+                default:
+                    var leftDigit = new Digit<T>(subRangeOf(array, 0, 3));
+                    var rightDigit = new Digit<T>(subRangeOf(array, length - 3, 3));
+                    
+                    // Note: node needs 2 or 3 elements
+                    return new Deep(
+                        leftDigit, 
+                        new(() => {
+                            var nodeArr = nodes(array, 0 + 3, length - 6);
+                            return FTree<Node<T, V>, V>.createRangeOptimized(nodeArr);
+                        }),
+                        rightDigit
+                    );
+            }
+            
+            static T[] subRangeOf(T[] input, int start, int length) {
+                var result = new T[length];
+                Array.Copy(input, start, result, 0, length);
+                return result;
+            }
         }
 
         public bool IsEmpty => this is EmptyT;
@@ -167,7 +201,9 @@ namespace FTrees
                             pr1,
                             new(() => app3(
                                 m1.Value,
-                                new Digit<Node<A, V>>(nodes(concat(sf1.Values, ts.Values, pr2.Values))), 
+                                new Digit<Node<A, V>>(
+                                    nodes(concat(sf1.Values, ts.Values, pr2.Values, out var length), 0, length)
+                                ), 
                                 m2.Value
                             )),
                             sf2
@@ -175,40 +211,41 @@ namespace FTrees
                     _ => throw new NotImplementedException()
                 };
 
-            static A[] concat<A>(A[] first, A[] second, A[] third) {
+            static A[] concat<A>(A[] first, A[] second, A[] third, out int length) {
                 var res = new A[first.Length + second.Length + third.Length];
                 Array.Copy(first, 0, res, 0, first.Length);
                 Array.Copy(second, 0, res, first.Length, second.Length);
                 Array.Copy(third, 0, res, first.Length + second.Length, third.Length);
+                length = res.Length;
                 return res;
             }
-            
-            // optimized relative to the paper to avoid unnecessary allocations
-            static Node<A, V>[] nodes<A>(A[] arr) where A : Measured<V> {
-                var mod = arr.Length % 3;
-                var res = new Node<A, V>[(arr.Length / 3) + (mod > 0 ? 1 : 0)];
+        }
+        
+        // optimized to avoid unnecessary allocations
+        private static Node<A, V>[] nodes<A>(A[] arr, int start, int length) where A : Measured<V> {
+            var mod = length % 3;
+            var res = new Node<A, V>[(length / 3) + (mod > 0 ? 1 : 0)];
+
+            // 0 -> no node2s, 2 -> 1 node2, 1 -> 2 node2s (all nodes need 2 or 3 items)
+            var numNode2 = (mod * 2) % 3; 
+            var node3EndIdx = start + length - numNode2 * 2;
                     
-                // if mod = 2, then need a single Node2 => stop 2 before
-                // if mod = 1, then need two Node2s => stop 4 before
-                var regularEnd = arr.Length - (4 - mod);
+            var arrIdx = start;
+            var resIdx = 0;
                     
-                var arrIdx = 0;
-                var resIdx = 0;
-                    
-                while (arrIdx < regularEnd) {
-                    res[resIdx] = new Node<A, V>(arr[arrIdx], arr[arrIdx + 1], arr[arrIdx + 2]);
-                    resIdx += 1;
-                    arrIdx += 3;
-                }
-                
-                for (var i = 0; i < (3 - mod); ++i) {
-                    res[resIdx] = new Node<A, V>(arr[arrIdx], arr[arrIdx + 1]);
-                    resIdx += 1;
-                    arrIdx += 2;
-                }
-                
-                return res;
+            while (arrIdx < node3EndIdx) {
+                res[resIdx] = new Node<A, V>(arr[arrIdx], arr[arrIdx + 1], arr[arrIdx + 2]);
+                resIdx += 1;
+                arrIdx += 3;
             }
+                
+            for (var i = 0; i < numNode2; ++i) {
+                res[resIdx] = new Node<A, V>(arr[arrIdx], arr[arrIdx + 1]);
+                resIdx += 1;
+                arrIdx += 2;
+            }
+                
+            return res;
         }
         
         // guaranteed to be O(logn)
@@ -219,7 +256,7 @@ namespace FTrees
                 var vpr = i.Add(pr.measure<T, V>());
                 if (p(vpr)) {
                     var (l, x, r) = splitDigit(p, i, pr);
-                    return new(CreateRange(l, isLazy: true), x, deepL(r, m, sf));
+                    return new(CreateRange(l), x, deepL(r, m, sf));
                 }
                 var vm = vpr.Add(m.Value.Measure);
                 if (p(vm)) {
@@ -229,7 +266,7 @@ namespace FTrees
                 }
                 else {
                     var (l, x, r) = splitDigit(p, vm, sf);
-                    return new(deepR(pr, m, l), x, CreateRange(r, isLazy: true));
+                    return new(deepR(pr, m, l), x, CreateRange(r));
                 }
             }
             throw new NotImplementedException();
@@ -254,57 +291,6 @@ namespace FTrees
                     Array.Copy(array, firstSize + 1, second, 0, secondSize);
                     return (first, array[idx], second);
                 }
-            }
-        }
-        
-        // guaranteed to be O(logn)
-        // like SplitTree, but doesn't generate unnecessary new trees
-        // also should check for the first `i > target` and stop
-        public ref readonly T LookupTree(V target, ref V i) {
-            return ref lookupTree(target, ref i);
-        }
-
-        private ref readonly T lookupTree(V target, ref V i) {
-            if (this is EmptyT) throw new InvalidOperationException();
-            if (this is Single s) return ref s.Value;
-            if (this is Deep(var pr, var m, var sf)) {
-                var vpr = i.Add(pr.measure<T, V>());
-                if (vpr.CompareTo(target) > 0) {
-                    return ref lookupDigit(target, i, pr.Values);
-                }
-
-                i = vpr;
-                var vm = vpr.Add(m.Value.Measure);
-                if (vm.CompareTo(target) > 0) {
-                    var xs = m.Value.lookupTree(target, ref vpr);
-                    return ref lookupNode(target, vpr, xs); // vpr increased by tree lookup
-                }
-
-                i = vm;
-                return ref lookupDigit(target, vm, sf.Values);
-                
-            }
-            throw new NotImplementedException();
-            
-            static ref readonly T lookupNode(V target, V i, Node<T, V> node) {
-                var i1 = i.Add(node.First.Measure);
-                if (i1.CompareTo(target) > 0) 
-                    return ref node.First;
-                var i2 = i1.Add(node.Second.Measure);
-                if (i2.CompareTo(target) > 0 || !node.HasThird) 
-                    return ref node.Second;
-                return ref node.Third;
-            }
-                
-            static ref readonly T lookupDigit(V target, V i, T[] digit) {
-                if (digit.Length == 1)
-                    return ref digit[0];
-                for (var idx = 0; idx < digit.Length; ++idx) {
-                    var newI = i.Add(digit[idx].Measure);
-                    if (newI.CompareTo(target) > 0) return ref digit[idx];
-                    i = newI;
-                }
-                return ref digit[digit.Length - 1];
             }
         }
 
@@ -375,7 +361,7 @@ namespace FTrees
                 var view = toViewL(m.Value);
                 return view.IsCons 
                     ? new FTree<A, V>.Deep(view.Head.ToDigit(), view.Tail, sf) 
-                    : FTree<A, V>.CreateRange(sf.Values, isLazy: true);
+                    : FTree<A, V>.CreateRange(sf.Values);
             }
             else return new FTree<A, V>.Deep(new(pr), m, sf);
         }
@@ -399,9 +385,56 @@ namespace FTrees
                 var view = toViewR(m.Value);
                 return view.IsCons 
                     ? new FTree<A, V>.Deep(pr, view.Tail, view.Head.ToDigit()) 
-                    : FTree<A, V>.CreateRange(pr.Values, isLazy: true);
+                    : FTree<A, V>.CreateRange(pr.Values);
             }
             else return new FTree<A, V>.Deep(pr, m, new(sf));
+        }
+        
+        // guaranteed to be O(logn)
+        // like SplitTree, but doesn't generate unnecessary new trees
+        // also should check for the first `i > target` and stop
+        public static ref readonly T LookupTree<T, V>(this FTree<T, V> tree, V target, ref V i) where T : Measured<V> where V : struct, IComparable<V>, Measure<V> {
+            if (tree is FTree<T, V>.EmptyT) throw new InvalidOperationException();
+            if (tree is FTree<T, V>.Single s) return ref s.Value;
+            if (tree is FTree<T, V>.Deep(var pr, var m, var sf)) {
+                var vpr = i.Add(pr.measure<T, V>());
+                if (vpr.CompareTo(target) > 0) {
+                    return ref lookupDigit(target, i, pr.Values);
+                }
+
+                i = vpr;
+                var vm = vpr.Add(m.Value.Measure);
+                if (vm.CompareTo(target) > 0) {
+                    var xs = LookupTree(m.Value, target, ref vpr);
+                    return ref lookupNode(target, vpr, xs); // vpr increased by tree lookup
+                }
+
+                i = vm;
+                return ref lookupDigit(target, vm, sf.Values);
+                
+            }
+            throw new NotImplementedException();
+            
+            static ref readonly T lookupNode(V target, V i, Node<T, V> node) {
+                var i1 = i.Add(node.First.Measure);
+                if (i1.CompareTo(target) > 0) 
+                    return ref node.First;
+                var i2 = i1.Add(node.Second.Measure);
+                if (i2.CompareTo(target) > 0 || !node.HasThird) 
+                    return ref node.Second;
+                return ref node.Third;
+            }
+                
+            static ref readonly T lookupDigit(V target, V i, T[] digit) {
+                if (digit.Length == 1)
+                    return ref digit[0];
+                for (var idx = 0; idx < digit.Length; ++idx) {
+                    var newI = i.Add(digit[idx].Measure);
+                    if (newI.CompareTo(target) > 0) return ref digit[idx];
+                    i = newI;
+                }
+                return ref digit[digit.Length - 1];
+            }
         }
     }
 
@@ -473,7 +506,7 @@ namespace FTrees
             };
     }
 
-    public interface Measure<TSelf> : IComparable<TSelf> { TSelf Add(TSelf other); }
+    public interface Measure<TSelf> { TSelf Add(TSelf other); }
     public interface Measured<V> where V : struct, Measure<V> { V Measure { get; } }
     
     internal sealed class Node<T, V> : Measured<V> where T : Measured<V> where V : struct, Measure<V>
@@ -524,7 +557,8 @@ namespace FTrees
         }
     }
     
-    // A Lazy<T> but less flexible but with less overhead
+    // Either a Lazy<T> or an already calculated value.
+    // The extra level of indirection adds performance in the eager case.
     internal readonly struct LazyThunk<T>
     {
         private readonly T _value;
