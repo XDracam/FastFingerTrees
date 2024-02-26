@@ -39,7 +39,7 @@ namespace FTrees
         /// O(log n)
         public ImmutableMaxPriorityQueue<T, P> ExtractMax(out T element, out P priority) {
             var tree = backing;
-            var (l, x, r) = backing.SplitTree(x => tree.Measure() <= x, default);
+            var (l, x, r) = backing.SplitTree(x => tree.Measure <= x, default);
             element = x.Value;
             priority = x.Priority;
             return new(l.Concat(r));

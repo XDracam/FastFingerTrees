@@ -29,7 +29,7 @@ namespace FTrees
         public static ImmutableSeq<T> Empty => new(FTree<SeqElem<T>, Size>.Empty);
 
         /// Amortized O(1)
-        public int Count => backing.Measure().Value;
+        public int Count => backing.Measure.Value;
 
         private (FTree<SeqElem<T>, Size>, FTree<SeqElem<T>, Size>) splitAt(int idx) => backing.Split(s => idx < s.Value);
         
@@ -49,7 +49,7 @@ namespace FTrees
                 if (idx == Count - 1) return Last;
                 
                 Size i = default;
-                return backing.LookupTree(s => idx < s.Value, ref i).Value;
+                return backing.LookupTree(new(idx), ref i).Value;
             }
         }
 
@@ -238,6 +238,8 @@ namespace FTrees
         public readonly int Value;
         public Size(int value) => Value = value;
         public Size Add(Size other) => new(Value + other.Value);
+
+        public int CompareTo(Size other) => Value.CompareTo(other.Value);
     }
 
     internal readonly struct SeqElem<T> : Measured<Size>

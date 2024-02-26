@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Collections.Immutable;
 
 namespace FTrees
 {
@@ -14,17 +13,20 @@ namespace FTrees
     /// <remarks> 
     /// Based on https://www.staff.city.ac.uk/~ross/papers/FingerTree.pdf
     /// </remarks>
-    public abstract class FTree<T, V> : IEnumerable<T>
+    public abstract class FTree<T, V> : IEnumerable<T>, Measured<V>
     where T : Measured<V> where V : Measure<V>, new()
     {
         private FTree() { }
 
         public static FTree<T, V> Empty => EmptyT.Instance;
+        
+        public abstract V Measure { get; }
 
         internal sealed class EmptyT : FTree<T, V>
         {
             private EmptyT() { }
             public static readonly EmptyT Instance = new();
+            public override V Measure => new();
         }
         
         internal sealed class Single : FTree<T, V>
@@ -32,12 +34,13 @@ namespace FTrees
             public readonly T Value;
             public Single(T value) => Value = value;
             public void Deconstruct(out T value) { value = Value; }
+            public override V Measure => Value.Measure;
         }
 
         internal sealed class Deep : FTree<T, V>
         {
             //public LazyThunk<V> Measure => new(measure);
-            public readonly LazyThunk<V> Measure;
+            private readonly LazyThunk<V> measure;
             public readonly Digit<T> Left;
             public readonly LazyThunk<FTree<Node<T, V>, V>> Spine;
             public readonly Digit<T> Right;
@@ -50,10 +53,10 @@ namespace FTrees
                 Left = left;
                 Spine = spine;
                 Right = right;
-                Measure = new(measure);
+                measure = new(measureNow);
             }
 
-            private V measure() => Left.measure<T, V>().Add(Spine.Value.Measure()).Add(Right.measure<T, V>());
+            private V measureNow() => Left.measure<T, V>().Add(Spine.Value.Measure).Add(Right.measure<T, V>());
             
             public void Deconstruct(
                 out Digit<T> left,
@@ -64,6 +67,8 @@ namespace FTrees
                 spine = this.Spine;
                 right = this.Right;
             }
+
+            public override V Measure => measure.Value;
         }
         
         public TRes ReduceRight<TRes>(Func<T, TRes, TRes> reduceOp, TRes other) => this switch {
@@ -217,10 +222,10 @@ namespace FTrees
                     var (l, x, r) = splitDigit(p, i, pr);
                     return new(CreateRange(l, isLazy: true), x, deepL(r, m, sf));
                 }
-                var vm = vpr.Add(m.Value.Measure());
+                var vm = vpr.Add(m.Value.Measure);
                 if (p(vm)) {
                     var (ml, xs, mr) = m.Value.SplitTree(p, vpr);
-                    var (l, x, r) = splitDigit(p, vpr.Add(ml.Measure()), xs.ToDigit());
+                    var (l, x, r) = splitDigit(p, vpr.Add(ml.Measure), xs.ToDigit());
                     return new(deepR<T, V>(pr, new(ml), l), x, deepL<T, V>(r, new(mr), sf));
                 }
                 else {
@@ -255,44 +260,49 @@ namespace FTrees
         
         // guaranteed to be O(logn)
         // like SplitTree, but doesn't generate unnecessary new trees
-        public ref readonly T LookupTree(Func<V, bool> p, ref V i) {
-            return ref lookupTree(p, ref i);
+        // also should check for the first `i > target` and stop
+        public ref readonly T LookupTree(V target, ref V i) {
+            return ref lookupTree(target, ref i);
         }
 
-        private ref readonly T lookupTree(Func<V, bool> p, ref V i) {
+        private ref readonly T lookupTree(V target, ref V i) {
             if (this is EmptyT) throw new InvalidOperationException();
             if (this is Single s) return ref s.Value;
             if (this is Deep(var pr, var m, var sf)) {
                 var vpr = i.Add(pr.measure<T, V>());
-                if (p(vpr)) {
-                    return ref lookupDigit(p, i, pr.Values);
+                if (vpr.CompareTo(target) > 0) {
+                    return ref lookupDigit(target, i, pr.Values);
                 }
-                var vm = vpr.Add(m.Value.Measure());
-                if (p(vm)) {
-                    var xs = m.Value.lookupTree(p, ref vpr);
-                    return ref lookupNode(p, vpr, xs); // vpr increased by tree lookup
+
+                i = vpr;
+                var vm = vpr.Add(m.Value.Measure);
+                if (vm.CompareTo(target) > 0) {
+                    var xs = m.Value.lookupTree(target, ref vpr);
+                    return ref lookupNode(target, vpr, xs); // vpr increased by tree lookup
                 }
-                else {
-                    return ref lookupDigit(p, vm, sf.Values);
-                }
+
+                i = vm;
+                return ref lookupDigit(target, vm, sf.Values);
+                
             }
             throw new NotImplementedException();
             
-            static ref readonly T lookupNode(Func<V, bool> p, V i, Node<T, V> node) {
+            static ref readonly T lookupNode(V target, V i, Node<T, V> node) {
                 var i1 = i.Add(node.First.Measure);
-                if (p(i1)) return ref node.First;
+                if (i1.CompareTo(target) > 0) 
+                    return ref node.First;
                 var i2 = i1.Add(node.Second.Measure);
-                if (p(i2) || !node.HasThird) 
+                if (i2.CompareTo(target) > 0 || !node.HasThird) 
                     return ref node.Second;
                 return ref node.Third;
             }
                 
-            static ref readonly T lookupDigit(Func<V, bool> p, V i, T[] digit) {
+            static ref readonly T lookupDigit(V target, V i, T[] digit) {
                 if (digit.Length == 1)
                     return ref digit[0];
                 for (var idx = 0; idx < digit.Length; ++idx) {
                     var newI = i.Add(digit[idx].Measure);
-                    if (p(newI)) return ref digit[idx];
+                    if (newI.CompareTo(target) > 0) return ref digit[idx];
                     i = newI;
                 }
                 return ref digit[digit.Length - 1];
@@ -301,7 +311,7 @@ namespace FTrees
 
         public (FTree<T, V>, FTree<T, V>) Split(Func<V, bool> p) {
             if (this is EmptyT) return (Empty, Empty);
-            if (p(this.Measure())) {
+            if (p(Measure)) {
                 var (l, x, r) = SplitTree(p, new());
                 return (l, r.Prepend(x));
             }
@@ -454,26 +464,19 @@ namespace FTrees
         };
     }
 
-    public static class MeasureExtensions
-    {
-        internal static V measure<T, V>(this Digit<T> digit) where T : Measured<V> where V : Measure<V>, new() {
-            var res = digit.Values[0].Measure;
-            for (var i = 1; i < digit.Values.Length; ++i) 
-                res = res.Add(digit.Values[i].Measure);
-            return res;
-        }
-        
-        public static V Measure<T, V>(this FTree<T, V> tree) where T : Measured<V> where V : Measure<V>, new() =>
-            tree switch {
-                FTree<T, V>.EmptyT => new(),
-                FTree<T, V>.Single(var x) => x.Measure,
-                FTree<T, V>.Deep d => d.Measure.Value,
+    public static class MeasureExtensions {
+        internal static V measure<T, V>(this Digit<T> digit) where T : Measured<V> where V : Measure<V>, new() =>
+            digit.Values.Length switch { // somehow faster than a loop
+                1 => digit.Values[0].Measure,
+                2 => digit.Values[0].Measure.Add(digit.Values[1].Measure),
+                3 => digit.Values[0].Measure.Add(digit.Values[1].Measure).Add(digit.Values[2].Measure),
+                4 => digit.Values[0].Measure.Add(digit.Values[1].Measure).Add(digit.Values[2].Measure).Add(digit.Values[3].Measure),
                 _ => throw new NotImplementedException()
             };
     }
 
-    public interface Measure<TSelf> { TSelf Add(TSelf other); }
-    public interface Measured<out V> where V : Measure<V>, new() { V Measure { get; } }
+    public interface Measure<TSelf> : IComparable<TSelf> { TSelf Add(TSelf other); }
+    public interface Measured<V> where V : Measure<V>, new() { V Measure { get; } }
     
     internal sealed class Node<T, V> : Measured<V> where T : Measured<V> where V : Measure<V>, new()
     {
@@ -524,32 +527,21 @@ namespace FTrees
     }
     
     // A Lazy<T> but less flexible but with less overhead
-    internal struct LazyThunk<T>
+    internal readonly struct LazyThunk<T>
     {
-        private bool _hasValue;
-        private T _value;
-        private Func<T> _getter;
-        
-        public T Value {
-            get {
-                if (_hasValue) return _value;
-                _value = _getter();
-                _getter = null;
-                _hasValue = true;
-                return _value;
-            }
-        }
+        private readonly T _value;
+        private readonly Lazy<T> _lazy;
+
+        public T Value => _lazy == null ? _value : _lazy.Value;
 
         public LazyThunk(T value) {
-            _hasValue = true;
             _value = value;
-            _getter = default;
+            _lazy = null;
         }
 
         public LazyThunk(Func<T> getter) {
-            _hasValue = false;
             _value = default;
-            _getter = getter;
+            _lazy = new(getter);
         }
     }
 }
