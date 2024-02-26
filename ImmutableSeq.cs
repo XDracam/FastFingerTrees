@@ -89,6 +89,7 @@ namespace FTrees
 
         /// O(log n), or amortized O(1) if appending or prepending
         public ImmutableSeq<T> Insert(int index, T element) {
+            // TODO: this is lower than ImmutableArrays...
             if (index == 0) return Prepend(element);
             if (index == Count) return Append(element);
             var (l, r) = splitAt(index);

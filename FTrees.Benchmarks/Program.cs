@@ -8,15 +8,8 @@ namespace FTrees.Benchmarks {
             var config = DefaultConfig.Instance.WithArtifactsPath("BenchmarkResults")
                 .AddExporter(BenchmarkDotNet.Exporters.HtmlExporter.Default)
                 .AddExporter(BenchmarkDotNet.Exporters.MarkdownExporter.GitHub);
-            
-            var switcher = BenchmarkSwitcher.FromTypes(new[] {
-                typeof(Add),
-                typeof(CreateRange),
-                typeof(Enumerate),
-                typeof(Index),
-                typeof(Concat),
-                typeof(SelfConcat)
-            });
+
+            var switcher = BenchmarkSwitcher.FromAssembly(typeof(Program).Assembly);
             
             var report = switcher.Run(args, config);
 
