@@ -48,7 +48,7 @@ namespace FTrees
                 if (idx == 0) return Head;
                 if (idx == Count - 1) return Last;
                 
-                Size i = default;
+                Size i = new();
                 return backing.LookupTree(new(idx), ref i).Value;
             }
         }
@@ -114,13 +114,13 @@ namespace FTrees
 
         /// O(log n)
         public ImmutableSeq<T> RemoveAt(int index) {
-            var (l, _, r) = backing.SplitTree(s => index < s.Value, default);
+            var (l, _, r) = backing.SplitTree(s => index < s.Value, new());
             return new(l.Concat(r));
         }
 
         /// O(log n)
         public ImmutableSeq<T> SetItem(int index, T value) {
-            var (l, _, r) = backing.SplitTree(s => index < s.Value, default);
+            var (l, _, r) = backing.SplitTree(s => index < s.Value, new());
             return new(l.Append(new(value)).Concat(r));
         }
 
@@ -238,7 +238,6 @@ namespace FTrees
         public readonly int Value;
         public Size(int value) => Value = value;
         public Size Add(Size other) => new(Value + other.Value);
-
         public int CompareTo(Size other) => Value.CompareTo(other.Value);
     }
 

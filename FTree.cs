@@ -14,7 +14,7 @@ namespace FTrees
     /// Based on https://www.staff.city.ac.uk/~ross/papers/FingerTree.pdf
     /// </remarks>
     public abstract class FTree<T, V> : IEnumerable<T>, Measured<V>
-    where T : Measured<V> where V : Measure<V>, new()
+    where T : Measured<V> where V : struct, Measure<V>
     {
         private FTree() { }
 
@@ -39,7 +39,6 @@ namespace FTrees
 
         internal sealed class Deep : FTree<T, V>
         {
-            //public LazyThunk<V> Measure => new(measure);
             private readonly LazyThunk<V> measure;
             public readonly Digit<T> Left;
             public readonly LazyThunk<FTree<Node<T, V>, V>> Spine;
@@ -322,8 +321,7 @@ namespace FTrees
         public FTree<T, V> DropUntil(Func<V, bool> p) => Split(p).Item2;
 
         IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
-
-        // TODO: can we do a fast, allocation-free, lazy iterator?
+        
         public IEnumerator<T> GetEnumerator() {
             if (this is EmptyT) yield break;
             else if (this is Single(var x)) yield return x;
@@ -359,7 +357,7 @@ namespace FTrees
     
     public static class FTree
     {
-        internal static View<A, V> toViewL<A, V>(FTree<A, V> self) where A : Measured<V> where V : Measure<V>, new() {
+        internal static View<A, V> toViewL<A, V>(FTree<A, V> self) where A : Measured<V> where V : struct, Measure<V> {
             return self switch {
                 FTree<A, V>.EmptyT => new View<A, V>(),
                 FTree<A, V>.Single(var x) => new View<A, V>(x, new(FTree<A, V>.EmptyT.Instance)),
@@ -372,7 +370,7 @@ namespace FTrees
             A[] pr, 
             LazyThunk<FTree<Node<A, V>, V>> m, 
             Digit<A> sf
-        ) where A : Measured<V> where V : Measure<V>, new() {
+        ) where A : Measured<V> where V : struct, Measure<V> {
             if (pr.Length == 0) {
                 var view = toViewL(m.Value);
                 return view.IsCons 
@@ -383,7 +381,7 @@ namespace FTrees
         }
         
         
-        internal static View<A, V> toViewR<A, V>(FTree<A, V> self) where A : Measured<V> where V : Measure<V>, new() {
+        internal static View<A, V> toViewR<A, V>(FTree<A, V> self) where A : Measured<V> where V : struct, Measure<V> {
             return self switch {
                 FTree<A, V>.EmptyT => new View<A, V>(),
                 FTree<A, V>.Single(var x) => new View<A, V>(x, new(FTree<A, V>.EmptyT.Instance)),
@@ -396,7 +394,7 @@ namespace FTrees
             Digit<A> pr,
             LazyThunk<FTree<Node<A, V>, V>> m, 
             A[] sf
-        ) where A : Measured<V> where V : Measure<V>, new() {
+        ) where A : Measured<V> where V : struct, Measure<V> {
             if (sf.Length == 0) {
                 var view = toViewR(m.Value);
                 return view.IsCons 
@@ -465,7 +463,7 @@ namespace FTrees
     }
 
     public static class MeasureExtensions {
-        internal static V measure<T, V>(this Digit<T> digit) where T : Measured<V> where V : Measure<V>, new() =>
+        internal static V measure<T, V>(this Digit<T> digit) where T : Measured<V> where V : struct, Measure<V> =>
             digit.Values.Length switch { // somehow faster than a loop
                 1 => digit.Values[0].Measure,
                 2 => digit.Values[0].Measure.Add(digit.Values[1].Measure),
@@ -476,9 +474,9 @@ namespace FTrees
     }
 
     public interface Measure<TSelf> : IComparable<TSelf> { TSelf Add(TSelf other); }
-    public interface Measured<V> where V : Measure<V>, new() { V Measure { get; } }
+    public interface Measured<V> where V : struct, Measure<V> { V Measure { get; } }
     
-    internal sealed class Node<T, V> : Measured<V> where T : Measured<V> where V : Measure<V>, new()
+    internal sealed class Node<T, V> : Measured<V> where T : Measured<V> where V : struct, Measure<V>
     {
         public readonly bool HasThird;
         public V Measure { get; }
@@ -513,7 +511,7 @@ namespace FTrees
         public Digit<T> ToDigit() => HasThird ? new Digit<T>(First, Second, Third) : new Digit<T>(First, Second);
     }
 
-    internal readonly struct View<T, V> where T : Measured<V> where V : Measure<V>, new()
+    internal readonly struct View<T, V> where T : Measured<V> where V : struct, Measure<V>
     {
         public readonly bool IsCons;
         public readonly T Head;
