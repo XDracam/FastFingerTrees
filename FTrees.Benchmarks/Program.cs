@@ -13,20 +13,20 @@ namespace FTrees.Benchmarks {
             //
             // var report = switcher.Run(args, config);
 
-            // var count = 10000000;
-            // var range = Enumerable.Range(0, count);
-            // var immutableSeq = ImmutableSeq.CreateRange(range);
-            // for (var i = 0; i < count; ++i) {
-            //     _ = immutableSeq[i];
-            //     _ = immutableSeq[count - i - 1];
-            // }
-            
-            var count = 100000;
+            var count = 1000000;
             var range = Enumerable.Range(0, count);
             var immutableSeq = ImmutableSeq.CreateRange(range);
             for (var i = 0; i < count; ++i) {
-                immutableSeq = immutableSeq.Insert(i/2, i);
+                _ = immutableSeq[i];
+                _ = immutableSeq[count - i - 1];
             }
+            
+            // var count = 100000;
+            // var range = Enumerable.Range(0, count);
+            // var immutableSeq = ImmutableSeq.CreateRange(range);
+            // for (var i = 0; i < count; ++i) {
+            //     immutableSeq = immutableSeq.Insert(i/2, i);
+            // }
         }
     }
 }

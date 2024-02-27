@@ -43,14 +43,14 @@ namespace FTrees
         /// O(log n)
         public T this[int idx] {
             get {
-                // TODO: this is still slow somehow
                 if (idx < 0) throw new IndexOutOfRangeException();
                 if (idx >= Count) throw new IndexOutOfRangeException();
                 if (idx == 0) return Head;
                 if (idx == Count - 1) return Last;
                 
-                Size i = new();
-                return backing.LookupTree(new(idx), ref i).Value;
+                int i = 0;
+                int target = idx;
+                return backing.LookupTree(ref target, ref i).Value;
             }
         }
 
@@ -234,12 +234,11 @@ namespace FTrees
 #endregion
     }
     
-    internal readonly struct Size : Measure<Size>, IComparable<Size>
+    internal readonly struct Size : Measure<Size>
     {
         public readonly int Value;
         public Size(int value) => Value = value;
         public Size Add(Size other) => new(Value + other.Value);
-        public int CompareTo(Size other) => Value.CompareTo(other.Value);
     }
 
     internal readonly struct SeqElem<T> : Measured<Size>
@@ -249,4 +248,56 @@ namespace FTrees
         public Size Measure => new(1);
     }
 
+    internal static class ImmutableSeqUtils {
+        // guaranteed to be O(logn)
+        // like SplitTree, but doesn't generate unnecessary new trees
+        // also should check for the first `i > target` and stop
+        internal static ref readonly T LookupTree<T>(this FTree<T, Size> tree, ref int target, ref int i) 
+        where T : Measured<Size>
+        {
+            if (tree is FTree<T, Size>.Single s) return ref s.Value;
+            if (tree is FTree<T, Size>.Deep(var pr, var m, var sf)) {
+                var vpr = i + pr.measure<T, Size>().Value;
+                if (vpr > target) {
+                    return ref lookupDigit(ref target, ref i, pr.Values);
+                }
+
+                i = vpr;
+                var mValue = m.Value;
+                var vm = vpr + mValue.Measure.Value;
+                if (vm > target) {
+                    var xs = LookupTree(mValue, ref target, ref i);
+                    return ref lookupNode(ref target, ref i, xs);
+                }
+
+                i = vm;
+                return ref lookupDigit(ref target, ref i, sf.Values);
+            }
+            throw new InvalidOperationException();
+            
+            static ref readonly T lookupNode(ref int target, ref int i, Node<T, Size> node) {
+                ref readonly var fst = ref node.First;
+                var i1 = i + fst.Measure.Value;
+                if (i1 > target) 
+                    return ref fst;
+                ref readonly var snd = ref node.Second;
+                var i2 = i1 + snd.Measure.Value;
+                if (!node.HasThird || i2 > target) 
+                    return ref snd;
+                return ref node.Third;
+            }
+            
+            static ref readonly T lookupDigit(ref int target, ref int i, T[] digit) {
+                if (digit.Length == 1)
+                    return ref digit[0];
+                for (var idx = 0; idx < digit.Length; ++idx) {
+                    ref var curr = ref digit[idx];
+                    var newI = i + curr.Measure.Value;
+                    if (newI.CompareTo(target) > 0) return ref curr;
+                    i = newI;
+                }
+                return ref digit[digit.Length - 1];
+            }
+        }
+    }
 }

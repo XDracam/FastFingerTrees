@@ -2,6 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using FastAtomicLazy;
 
 namespace FTrees
@@ -398,54 +399,6 @@ namespace FTrees
                     new FTree<A, V>.Deep(pr, new(() => deepR(pr2, m2, sf2.Init.Values)), sf2.Last.ToDigit()),
                 _ => throw new NotImplementedException()
             };
-        }
-        
-        // guaranteed to be O(logn)
-        // like SplitTree, but doesn't generate unnecessary new trees
-        // also should check for the first `i > target` and stop
-        public static ref readonly T LookupTree<T, V>(this FTree<T, V> tree, V target, ref V i) 
-        where T : Measured<V> where V : struct, IComparable<V>, Measure<V> 
-        {
-            if (tree is FTree<T, V>.Single s) return ref s.Value;
-            if (tree is FTree<T, V>.Deep(var pr, var m, var sf)) {
-                var vpr = i.Add(pr.measure<T, V>());
-                if (vpr.CompareTo(target) > 0) {
-                    return ref lookupDigit(target, i, pr.Values);
-                }
-
-                i = vpr;
-                var vm = vpr.Add(m.Value.Measure);
-                if (vm.CompareTo(target) > 0) {
-                    var xs = LookupTree(m.Value, target, ref i);
-                    return ref lookupNode(target, i, xs);
-                }
-
-                i = vm;
-                return ref lookupDigit(target, vm, sf.Values);
-                
-            }
-            throw new InvalidOperationException();
-            
-            static ref readonly T lookupNode(V target, V i, Node<T, V> node) {
-                var i1 = i.Add(node.First.Measure);
-                if (i1.CompareTo(target) > 0) 
-                    return ref node.First;
-                var i2 = i1.Add(node.Second.Measure);
-                if (i2.CompareTo(target) > 0 || !node.HasThird) 
-                    return ref node.Second;
-                return ref node.Third;
-            }
-                
-            static ref readonly T lookupDigit(V target, V i, T[] digit) {
-                if (digit.Length == 1)
-                    return ref digit[0];
-                for (var idx = 0; idx < digit.Length; ++idx) {
-                    var newI = i.Add(digit[idx].Measure);
-                    if (newI.CompareTo(target) > 0) return ref digit[idx];
-                    i = newI;
-                }
-                return ref digit[digit.Length - 1];
-            }
         }
     }
 
