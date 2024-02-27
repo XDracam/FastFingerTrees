@@ -124,8 +124,8 @@ namespace FTrees
 
         public static FTree<T, V> Create(params T[] values) => CreateRange(values);
         
-        public static FTree<T, V> CreateRange(IEnumerable<T> values) =>
-            createRangeOptimized(values as T[] ?? values.ToArray());
+        public static FTree<T, V> CreateRange(T[] values) =>
+            createRangeOptimized(values);
         
         private static FTree<T, V> createRangeOptimized(T[] array) {
             var length = array.Length;
@@ -251,7 +251,6 @@ namespace FTrees
         
         // guaranteed to be O(logn)
         public (FTree<T, V>, T, FTree<T, V>) SplitTree(Func<V, bool> p, V i) {
-            if (this is EmptyT) throw new InvalidOperationException();
             if (this is Single(var s)) return new(Empty, s, Empty);
             if (this is Deep(var pr, var m, var sf)) {
                 var vpr = i.Add(pr.measure<T, V>());
@@ -270,7 +269,7 @@ namespace FTrees
                     return new(deepR(pr, m, l), x, CreateRange(r));
                 }
             }
-            throw new NotImplementedException();
+            throw new InvalidOperationException();
             
             // digits have at most 4 items, so O(1)
             static (A[], A, A[]) splitDigit<A>(Func<V, bool> p, V i, Digit<A> digit) where A : Measured<V> {
@@ -358,13 +357,18 @@ namespace FTrees
             LazyThunk<FTree<Node<A, V>, V>> m, 
             Digit<A> sf
         ) where A : Measured<V> where V : struct, Measure<V> {
-            if (pr.Length == 0) {
-                var view = toViewL(m.Value);
-                return view.IsCons 
-                    ? new FTree<A, V>.Deep(view.Head.ToDigit(), view.Tail, sf) 
-                    : FTree<A, V>.CreateRange(sf.Values);
-            }
-            else return new FTree<A, V>.Deep(new(pr), m, sf);
+            if (pr.Length > 0) 
+                return new FTree<A, V>.Deep(new(pr), m, sf);
+            
+            return m.Value switch {
+                FTree<Node<A, V>, V>.EmptyT => 
+                    FTree<A, V>.CreateRange(sf.Values),
+                FTree<Node<A, V>, V>.Single(var x) => 
+                    new FTree<A, V>.Deep(x.ToDigit(), new(FTree<Node<A, V>, V>.Empty), sf),
+                FTree<Node<A, V>, V>.Deep(var pr2, var m2, var sf2) => 
+                    new FTree<A, V>.Deep(pr2.Head.ToDigit(), new(() => deepL(pr2.Tail.Values, m2, sf2)), sf),
+                _ => throw new NotImplementedException()
+            };
         }
         
         
@@ -382,20 +386,26 @@ namespace FTrees
             LazyThunk<FTree<Node<A, V>, V>> m, 
             A[] sf
         ) where A : Measured<V> where V : struct, Measure<V> {
-            if (sf.Length == 0) {
-                var view = toViewR(m.Value);
-                return view.IsCons 
-                    ? new FTree<A, V>.Deep(pr, view.Tail, view.Head.ToDigit()) 
-                    : FTree<A, V>.CreateRange(pr.Values);
-            }
-            else return new FTree<A, V>.Deep(pr, m, new(sf));
+            if (sf.Length > 0) 
+                return new FTree<A, V>.Deep(pr, m, new(sf));
+            
+            return m.Value switch {
+                FTree<Node<A, V>, V>.EmptyT => 
+                    FTree<A, V>.CreateRange(pr.Values),
+                FTree<Node<A, V>, V>.Single(var x) => 
+                    new FTree<A, V>.Deep(pr, new(FTree<Node<A, V>, V>.Empty), x.ToDigit()),
+                FTree<Node<A, V>, V>.Deep(var pr2, var m2, var sf2) => 
+                    new FTree<A, V>.Deep(pr, new(() => deepR(pr2, m2, sf2.Init.Values)), sf2.Last.ToDigit()),
+                _ => throw new NotImplementedException()
+            };
         }
         
         // guaranteed to be O(logn)
         // like SplitTree, but doesn't generate unnecessary new trees
         // also should check for the first `i > target` and stop
-        public static ref readonly T LookupTree<T, V>(this FTree<T, V> tree, V target, ref V i) where T : Measured<V> where V : struct, IComparable<V>, Measure<V> {
-            if (tree is FTree<T, V>.EmptyT) throw new InvalidOperationException();
+        public static ref readonly T LookupTree<T, V>(this FTree<T, V> tree, V target, ref V i) 
+        where T : Measured<V> where V : struct, IComparable<V>, Measure<V> 
+        {
             if (tree is FTree<T, V>.Single s) return ref s.Value;
             if (tree is FTree<T, V>.Deep(var pr, var m, var sf)) {
                 var vpr = i.Add(pr.measure<T, V>());
@@ -406,15 +416,15 @@ namespace FTrees
                 i = vpr;
                 var vm = vpr.Add(m.Value.Measure);
                 if (vm.CompareTo(target) > 0) {
-                    var xs = LookupTree(m.Value, target, ref vpr);
-                    return ref lookupNode(target, vpr, xs); // vpr increased by tree lookup
+                    var xs = LookupTree(m.Value, target, ref i);
+                    return ref lookupNode(target, i, xs);
                 }
 
                 i = vm;
                 return ref lookupDigit(target, vm, sf.Values);
                 
             }
-            throw new NotImplementedException();
+            throw new InvalidOperationException();
             
             static ref readonly T lookupNode(V target, V i, Node<T, V> node) {
                 var i1 = i.Add(node.First.Measure);
@@ -514,16 +524,15 @@ namespace FTrees
     {
         public readonly bool HasThird;
         public readonly T First, Second, Third;
-        
-        private readonly LazyThunk<V> measure;
-        public V Measure => measure.Value;
+
+        public V Measure { get; } // in all benchmarks, making this lazy just slows things down
 
         public Node(T first, T second) {
             HasThird = false;
             First = first;
             Second = second;
             Third = default;
-            measure = new(() => first.Measure.Add(second.Measure));
+            Measure = first.Measure.Add(second.Measure);
         }
         
         public Node(T first, T second, T third) {
@@ -531,7 +540,7 @@ namespace FTrees
             First = first;
             Second = second;
             Third = third;
-            measure = new(() => first.Measure.Add(second.Measure).Add(third.Measure));
+            Measure = first.Measure.Add(second.Measure).Add(third.Measure);
         }
 
         public TRes ReduceRight<TRes>(Func<T, TRes, TRes> reduceOp, TRes other) {

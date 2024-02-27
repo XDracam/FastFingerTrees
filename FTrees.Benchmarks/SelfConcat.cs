@@ -11,7 +11,12 @@ namespace FTrees.Benchmarks {
         private ImmutableList<int> immutableList;
         private ImmutableSeq<int> immutableSeq;
 
-        [Params(100, 1000, 10000, 30000)]
+        [Params(
+            // 100,
+            // 1000,
+            // 10000,
+            30000
+        )]
         public int Count;
 
         [GlobalSetup]

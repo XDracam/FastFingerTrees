@@ -5,7 +5,12 @@ using BenchmarkDotNet.Attributes;
 namespace FTrees.Benchmarks {
     public class InsertMiddle {
 
-        [Params(100, 1000, 10000, 30000)]
+        [Params(
+            // 100,
+            // 1000,
+            // 10000,
+            30000
+        )]
         public int Count;
 
         [GlobalSetup]

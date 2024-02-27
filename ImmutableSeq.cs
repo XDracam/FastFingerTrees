@@ -11,7 +11,7 @@ namespace FTrees
         public static ImmutableSeq<T> Create<T>(params T[] values) => CreateRange(values);
         
         public static ImmutableSeq<T> CreateRange<T>(IEnumerable<T> values) =>
-            new(FTree<SeqElem<T>, Size>.CreateRange(values.Select(v => new SeqElem<T>(v))));
+            new(FTree<SeqElem<T>, Size>.CreateRange(values.Select(v => new SeqElem<T>(v)).ToArray()));
     }
     
     /// <summary>
@@ -31,18 +31,19 @@ namespace FTrees
         /// Amortized O(1)
         public int Count => backing.Measure.Value;
 
-        private (FTree<SeqElem<T>, Size>, FTree<SeqElem<T>, Size>) splitAt(int idx) => backing.Split(s => idx < s.Value);
+        private (FTree<SeqElem<T>, Size>, FTree<SeqElem<T>, Size>) splitAt(int idx) => 
+            backing.Split(s => idx < s.Value);
         
         /// O(log n)
         public (ImmutableSeq<T> Before, ImmutableSeq<T> After) SplitAt(int idx) {
             var (l, r) = splitAt(idx);
             return (new(l), new(r));
         }
-
         
         /// O(log n)
         public T this[int idx] {
             get {
+                // TODO: this is still slow somehow
                 if (idx < 0) throw new IndexOutOfRangeException();
                 if (idx >= Count) throw new IndexOutOfRangeException();
                 if (idx == 0) return Head;
@@ -83,7 +84,7 @@ namespace FTrees
             if (items is ImmutableSeq<T> seq) 
                 return new(backing.Concat(seq.backing)); // O(1)
             
-            var otherTree = FTree<SeqElem<T>, Size>.CreateRange(items.Select(x => new SeqElem<T>(x)));
+            var otherTree = FTree<SeqElem<T>, Size>.CreateRange(items.Select(x => new SeqElem<T>(x)).ToArray());
             return new(backing.Concat(otherTree));
         }
 
@@ -93,7 +94,7 @@ namespace FTrees
             if (index == 0) return Prepend(element);
             if (index == Count) return Append(element);
             var (l, r) = splitAt(index);
-            return new(l.Append(new(element)).Concat(r));
+            return new(l.Concat(r.Prepend(new(element))));
         }
 
         /// O(log n + |items|), or O(log n) if items is an <c>ImmutableSeq{T}</c>
@@ -101,7 +102,7 @@ namespace FTrees
             var (l, r) = splitAt(index);
             var middle = items is ImmutableSeq<T> seq 
                 ? seq.backing 
-                : FTree<SeqElem<T>, Size>.CreateRange(items.Select(i => new SeqElem<T>(i)));
+                : FTree<SeqElem<T>, Size>.CreateRange(items.Select(i => new SeqElem<T>(i)).ToArray());
             return new(l.Concat(middle).Concat(r));
         }
 

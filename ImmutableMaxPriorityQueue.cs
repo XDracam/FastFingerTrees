@@ -10,7 +10,7 @@ namespace FTrees
             CreateRange(values);
         
         public static ImmutableMaxPriorityQueue<T, P> CreateRange<T, P>(IEnumerable<(T, P)> values) where P : IComparable<P> =>
-            new(FTree<PrioElem<T, P>, Prio<P>>.CreateRange(values.Select(v => new PrioElem<T, P>(v.Item1, v.Item2))));
+            new(FTree<PrioElem<T, P>, Prio<P>>.CreateRange(values.Select(v => new PrioElem<T, P>(v.Item1, v.Item2)).ToArray()));
     }
     
     /// <summary>
