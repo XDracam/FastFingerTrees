@@ -2,6 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using FastAtomicLazy;
 
 namespace FTrees
 {
@@ -512,15 +513,17 @@ namespace FTrees
     internal sealed class Node<T, V> : Measured<V> where T : Measured<V> where V : struct, Measure<V>
     {
         public readonly bool HasThird;
-        public V Measure { get; }
         public readonly T First, Second, Third;
+        
+        private readonly LazyThunk<V> measure;
+        public V Measure => measure.Value;
 
         public Node(T first, T second) {
             HasThird = false;
             First = first;
             Second = second;
             Third = default;
-            Measure = first.Measure.Add(second.Measure);
+            measure = new(() => first.Measure.Add(second.Measure));
         }
         
         public Node(T first, T second, T third) {
@@ -528,7 +531,7 @@ namespace FTrees
             First = first;
             Second = second;
             Third = third;
-            Measure = first.Measure.Add(second.Measure).Add(third.Measure);
+            measure = new(() => first.Measure.Add(second.Measure).Add(third.Measure));
         }
 
         public TRes ReduceRight<TRes>(Func<T, TRes, TRes> reduceOp, TRes other) {
@@ -558,11 +561,11 @@ namespace FTrees
     }
     
     // Either a Lazy<T> or an already calculated value.
-    // The extra level of indirection adds performance in the eager case.
+    // The extra level of indirection adds performance when initialized eagerly.
     internal readonly struct LazyThunk<T>
     {
         private readonly T _value;
-        private readonly Lazy<T> _lazy;
+        private readonly FastLazy<T> _lazy;
 
         public T Value => _lazy == null ? _value : _lazy.Value;
 

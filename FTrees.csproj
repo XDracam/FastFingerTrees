@@ -57,6 +57,7 @@
 		<Reference Include="System.Xml"/>
 	</ItemGroup>
 	<ItemGroup>
+		<Compile Include="FastLazy\FastLazy.cs" />
 		<Compile Include="FTree.cs" />
 		<Compile Include="ImmutableIntervalTree.cs" />
 		<Compile Include="ImmutableMaxPriorityQueue.cs" />

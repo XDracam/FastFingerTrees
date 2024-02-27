@@ -1,0 +1,7 @@
+This implementation of FastLazy was taken from here:
+
+https://github.com/Aaronontheweb/FastAtomicLazy
+
+Made by Aaron Stannard.
+
+I am not affiliated with this person in any way.
