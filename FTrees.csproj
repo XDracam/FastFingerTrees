@@ -61,7 +61,7 @@
 		<Compile Include="FTree.cs" />
 		<Compile Include="ImmutableIntervalTree.cs" />
 		<Compile Include="ImmutableMaxPriorityQueue.cs" />
-		<Compile Include="ImmutableOrderedSeq.cs" />
+		<Compile Include="ImmutableOrderedSet.cs" />
 		<Compile Include="ImmutableSeq.cs" />
 		<Compile Include="Properties\AssemblyInfo.cs"/>
 	</ItemGroup>

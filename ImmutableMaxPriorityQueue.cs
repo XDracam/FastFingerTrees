@@ -60,7 +60,7 @@ namespace FTrees
             Value = value;
         }
 
-        public Prio<P> Add(Prio<P> other) {
+        public Prio<P> Add(in Prio<P> other) {
             return HasValue
                 ? other.HasValue
                     ? new(Value.CompareTo(other.Value) >= 0 ? Value : other.Value)

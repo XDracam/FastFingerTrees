@@ -152,6 +152,7 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="ImmutableOrderedSetTests.cs" />
     <Compile Include="ImmutableSeqTests.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>

@@ -238,7 +238,7 @@ namespace FTrees
     {
         public readonly int Value;
         public Size(int value) => Value = value;
-        public Size Add(Size other) => new(Value + other.Value);
+        public Size Add(in Size other) => new(Value + other.Value);
     }
 
     internal readonly struct SeqElem<T> : Measured<Size>

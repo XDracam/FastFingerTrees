@@ -89,7 +89,7 @@ namespace FTrees
         public readonly Prio<P> Prio;
         public KeyPrio(Key<P> key, Prio<P> prio) => (Key, Prio) = (key, prio);
 
-        public KeyPrio<P> Add(KeyPrio<P> other) => new(Key.Add(other.Key), Prio.Add(other.Prio));
+        public KeyPrio<P> Add(in KeyPrio<P> other) => new(Key.Add(other.Key), Prio.Add(other.Prio));
 
         public bool AtLeast(P k) => new Prio<P>(k).CompareTo(Prio) <= 0;
         public bool Greater(P k) => Key.CompareTo(new(k)) > 0;

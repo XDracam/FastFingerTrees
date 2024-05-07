@@ -1,7 +1,10 @@
 ﻿<wpf:ResourceDictionary xml:space="preserve" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:s="clr-namespace:System;assembly=mscorlib" xmlns:ss="urn:shemas-jetbrains-com:settings-storage-xaml" xmlns:wpf="http://schemas.microsoft.com/winfx/2006/xaml/presentation">
+	<s:Boolean x:Key="/Default/Environment/InlayHints/GeneralInlayHintsOptions/EnableInlayHints/@EntryValue">False</s:Boolean>
 	<s:String x:Key="/Default/Environment/UnitTesting/UnitTestSessionStore/Sessions/=19f725de_002D344e_002D4687_002Db1b5_002D7ea369d0fee1/@EntryIndexedValue">&lt;SessionState ContinuousTestingMode="0" IsActive="True" Name="ImmutableSeqTests" xmlns="urn:schemas-jetbrains-com:jetbrains-ut-session"&gt;&#xD;
   &lt;TestAncestor&gt;&#xD;
     &lt;TestId&gt;NUnit3x::16746F6F-FBA3-4054-9DFD-E62E3C28E555::.NETFramework,Version=v4.7.2::FTrees.Tests.ImmutableSeqTests&lt;/TestId&gt;&#xD;
     &lt;TestId&gt;NUnit3x::16746F6F-FBA3-4054-9DFD-E62E3C28E555::.NETFramework,Version=v4.7.2::FTrees.Tests.RunBenchmarkTest.RunBenchmarks&lt;/TestId&gt;&#xD;
+    &lt;TestId&gt;NUnit3x::16746F6F-FBA3-4054-9DFD-E62E3C28E555::.NETFramework,Version=v4.7.2::FTrees.Tests.ImmutableOrderedSetTests.MergeWith_OtherSet_ShouldContainAllUniqueValuesSorted&lt;/TestId&gt;&#xD;
+    &lt;TestId&gt;NUnit3x::16746F6F-FBA3-4054-9DFD-E62E3C28E555::.NETFramework,Version=v4.7.2::FTrees.Tests.ImmutableOrderedSetTests&lt;/TestId&gt;&#xD;
   &lt;/TestAncestor&gt;&#xD;
 &lt;/SessionState&gt;</s:String></wpf:ResourceDictionary>

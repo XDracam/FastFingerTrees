@@ -29,7 +29,7 @@ namespace FTrees
         {
             private EmptyT() { }
             public static readonly EmptyT Instance = new();
-            public override V Measure => new();
+            public override V Measure => default;
         }
         
         internal sealed class Single : FTree<T, V>
@@ -470,7 +470,7 @@ namespace FTrees
             };
     }
 
-    public interface Measure<TSelf> { TSelf Add(TSelf other); }
+    public interface Measure<TSelf> where TSelf : struct { TSelf Add(in TSelf other); }
     public interface Measured<V> where V : struct, Measure<V> { V Measure { get; } }
     
     internal sealed class Node<T, V> : Measured<V> where T : Measured<V> where V : struct, Measure<V>
@@ -528,14 +528,14 @@ namespace FTrees
     {
         private readonly T _value;
         private readonly FastLazy<T> _lazy;
-
+    
         public T Value => _lazy == null ? _value : _lazy.Value;
-
+    
         public LazyThunk(T value) {
             _value = value;
             _lazy = null;
         }
-
+    
         public LazyThunk(Func<T> getter) {
             _value = default;
             _lazy = new(getter);
