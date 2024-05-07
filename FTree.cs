@@ -478,14 +478,25 @@ namespace FTrees
         public readonly bool HasThird;
         public readonly T First, Second, Third;
 
-        public V Measure { get; } // in all benchmarks, making this lazy just slows things down
+        private bool _hasMeasure;
+        private V _measure;
+        
+        public V Measure {
+            get {
+                if (_hasMeasure) return _measure;
+                _measure = HasThird
+                    ? First.Measure.Add(Second.Measure).Add(Third.Measure)
+                    : First.Measure.Add(Second.Measure);
+                _hasMeasure = true;
+                return _measure;
+            }
+        }
 
         public Node(T first, T second) {
             HasThird = false;
             First = first;
             Second = second;
             Third = default;
-            Measure = first.Measure.Add(second.Measure);
         }
         
         public Node(T first, T second, T third) {
@@ -493,7 +504,6 @@ namespace FTrees
             First = first;
             Second = second;
             Third = third;
-            Measure = first.Measure.Add(second.Measure).Add(third.Measure);
         }
 
         public TRes ReduceRight<TRes>(Func<T, TRes, TRes> reduceOp, TRes other) {
