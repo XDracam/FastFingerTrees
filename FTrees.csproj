@@ -58,11 +58,11 @@
 	</ItemGroup>
 	<ItemGroup>
 		<Compile Include="FastLazy\FastLazy.cs" />
-		<Compile Include="FTree.cs" />
-		<Compile Include="ImmutableIntervalTree.cs" />
-		<Compile Include="ImmutableMaxPriorityQueue.cs" />
-		<Compile Include="ImmutableOrderedSet.cs" />
-		<Compile Include="ImmutableSeq.cs" />
+		<Compile Include="FTrees\FTree.cs" />
+		<Compile Include="FTrees\ImmutableIntervalTree.cs" />
+		<Compile Include="FTrees\ImmutableMaxPriorityQueue.cs" />
+		<Compile Include="FTrees\ImmutableOrderedSet.cs" />
+		<Compile Include="FTrees\ImmutableSeq.cs" />
 		<Compile Include="Properties\AssemblyInfo.cs"/>
 	</ItemGroup>
 	<ItemGroup>

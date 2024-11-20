@@ -1,6 +1,7 @@
 ﻿using System.Collections.Immutable;
 using System.Linq;
 using NUnit.Framework;
+using NUnit.Framework.Legacy;
 
 namespace FTrees.Tests
 {
@@ -11,7 +12,7 @@ namespace FTrees.Tests
         public void TestEmptyList()
         {
             ImmutableSeq<int> list = ImmutableSeq<int>.Empty;
-            Assert.AreEqual(0, list.Count);
+            ClassicAssert.AreEqual(0, list.Count);
         }
 
         [Test]
@@ -19,8 +20,8 @@ namespace FTrees.Tests
         {
             IImmutableList<int> list = ImmutableSeq<int>.Empty;
             list = list.Add(1);
-            Assert.AreEqual(1, list.Count);
-            Assert.AreEqual(1, list[0]);
+            ClassicAssert.AreEqual(1, list.Count);
+            ClassicAssert.AreEqual(1, list[0]);
         }
 
         [Test]
@@ -28,8 +29,8 @@ namespace FTrees.Tests
         {
             IImmutableList<int> list = ImmutableSeq.Create(1, 2, 3);
             list = list.Remove(2);
-            Assert.AreEqual(2, list.Count);
-            Assert.IsFalse(list.Contains(2));
+            ClassicAssert.AreEqual(2, list.Count);
+            ClassicAssert.IsFalse(list.Contains(2));
         }
 
         [Test]
@@ -39,10 +40,10 @@ namespace FTrees.Tests
             list = list.Insert(0, 1);
             list = list.Insert(1, 3);
             list = list.Insert(1, 2); // Inserting in the middle
-            Assert.AreEqual(3, list.Count);
-            Assert.AreEqual(1, list[0]);
-            Assert.AreEqual(2, list[1]);
-            Assert.AreEqual(3, list[2]);
+            ClassicAssert.AreEqual(3, list.Count);
+            ClassicAssert.AreEqual(1, list[0]);
+            ClassicAssert.AreEqual(2, list[1]);
+            ClassicAssert.AreEqual(3, list[2]);
         }
 
         [Test]
@@ -54,7 +55,7 @@ namespace FTrees.Tests
             {
                 sum += item;
             }
-            Assert.AreEqual(6, sum);
+            ClassicAssert.AreEqual(6, sum);
         }
 
         [Test]
@@ -62,7 +63,7 @@ namespace FTrees.Tests
         {
             IImmutableList<int> list = ImmutableSeq.Create(1, 2, 3);
             list = list.Clear();
-            Assert.AreEqual(0, list.Count);
+            ClassicAssert.AreEqual(0, list.Count);
         }
 
         [Test]
@@ -70,8 +71,8 @@ namespace FTrees.Tests
         {
             IImmutableList<int> list = ImmutableSeq.Create(1, 2, 3);
             list = list.Replace(2, 5);
-            Assert.AreEqual(3, list.Count);
-            Assert.AreEqual(5, list[1]);
+            ClassicAssert.AreEqual(3, list.Count);
+            ClassicAssert.AreEqual(5, list[1]);
         }
         
         [Test]
@@ -79,8 +80,8 @@ namespace FTrees.Tests
         {
             IImmutableList<int> list = ImmutableSeq.Create(1, 2, 3);
             list = list.SetItem(1, 4); // Replace the item at index 1
-            Assert.AreEqual(3, list.Count);
-            Assert.AreEqual(4, list[1]);
+            ClassicAssert.AreEqual(3, list.Count);
+            ClassicAssert.AreEqual(4, list[1]);
         }
 
         [Test]
@@ -88,8 +89,8 @@ namespace FTrees.Tests
         {
             IImmutableList<int> list = ImmutableSeq.Create(1, 2, 3);
             list = list.RemoveAt(1); // Remove the item at index 1
-            Assert.AreEqual(2, list.Count);
-            Assert.IsFalse(list.Contains(2)); // 2 was removed
+            ClassicAssert.AreEqual(2, list.Count);
+            ClassicAssert.IsFalse(list.Contains(2)); // 2 was removed
         }
 
         [Test]
@@ -97,9 +98,9 @@ namespace FTrees.Tests
         {
             IImmutableList<int> list = ImmutableSeq.Create(1, 2, 3, 4, 5);
             list = list.RemoveRange(1, 3); // Remove 3 items starting from index 1
-            Assert.AreEqual(2, list.Count);
-            Assert.AreEqual(1, list[0]);
-            Assert.AreEqual(5, list[1]);
+            ClassicAssert.AreEqual(2, list.Count);
+            ClassicAssert.AreEqual(1, list[0]);
+            ClassicAssert.AreEqual(5, list[1]);
         }
 
         [Test]
@@ -107,10 +108,10 @@ namespace FTrees.Tests
         {
             IImmutableList<int> list = ImmutableSeq.Create(1, 5);
             list = list.InsertRange(1, new[] { 2, 3, 4 }); // Insert a range at index 1
-            Assert.AreEqual(5, list.Count);
+            ClassicAssert.AreEqual(5, list.Count);
             for (int i = 0; i < 5; i++)
             {
-                Assert.AreEqual(i + 1, list[i]);
+                ClassicAssert.AreEqual(i + 1, list[i]);
             }
         }
 
@@ -119,10 +120,10 @@ namespace FTrees.Tests
         {
             IImmutableList<int> list = ImmutableSeq.Create(1, 2);
             list = list.AddRange(new[] { 3, 4, 5 }); // Add a range to the end
-            Assert.AreEqual(5, list.Count);
+            ClassicAssert.AreEqual(5, list.Count);
             for (int i = 0; i < 5; i++)
             {
-                Assert.AreEqual(i + 1, list[i]);
+                ClassicAssert.AreEqual(i + 1, list[i]);
             }
         }
         
@@ -131,7 +132,7 @@ namespace FTrees.Tests
         {
             var list = ImmutableSeq.Create(1, 2, 3, 4, 5, 6, 7, 8, 9, 10);
             int head = list.Head; // Assuming `Head` gets the first element
-            Assert.AreEqual(1, head);
+            ClassicAssert.AreEqual(1, head);
         }
 
         [Test]
@@ -139,7 +140,7 @@ namespace FTrees.Tests
         {
            var list = ImmutableSeq.Create(1, 2, 3, 4, 5, 6, 7, 8, 9, 10);
             int last = list.Last;
-            Assert.AreEqual(10, last);
+            ClassicAssert.AreEqual(10, last);
         }
 
         [Test]
@@ -147,16 +148,16 @@ namespace FTrees.Tests
         {
             var list = ImmutableSeq.Create(1, 2, 3, 4, 5, 6, 7, 8, 9, 10);
             var tail = list.Tail;
-            Assert.AreEqual(9, tail.Count);
-            Assert.AreEqual(2, tail[0]);
-            Assert.AreEqual(3, tail[1]);
-            Assert.AreEqual(4, tail[2]);
-            Assert.AreEqual(5, tail[3]);
-            Assert.AreEqual(6, tail[4]);
-            Assert.AreEqual(7, tail[5]);
-            Assert.AreEqual(8, tail[6]);
-            Assert.AreEqual(9, tail[7]);
-            Assert.AreEqual(10, tail[8]);
+            ClassicAssert.AreEqual(9, tail.Count);
+            ClassicAssert.AreEqual(2, tail[0]);
+            ClassicAssert.AreEqual(3, tail[1]);
+            ClassicAssert.AreEqual(4, tail[2]);
+            ClassicAssert.AreEqual(5, tail[3]);
+            ClassicAssert.AreEqual(6, tail[4]);
+            ClassicAssert.AreEqual(7, tail[5]);
+            ClassicAssert.AreEqual(8, tail[6]);
+            ClassicAssert.AreEqual(9, tail[7]);
+            ClassicAssert.AreEqual(10, tail[8]);
         }
 
         [Test]
@@ -164,16 +165,16 @@ namespace FTrees.Tests
         {
             var list = ImmutableSeq.Create(1, 2, 3, 4, 5, 6, 7, 8, 9, 10);
             var init = list.Init; 
-            Assert.AreEqual(9, init.Count);
-            Assert.AreEqual(1, init[0]);
-            Assert.AreEqual(2, init[1]);
-            Assert.AreEqual(3, init[2]);
-            Assert.AreEqual(4, init[3]);
-            Assert.AreEqual(5, init[4]);
-            Assert.AreEqual(6, init[5]);
-            Assert.AreEqual(7, init[6]);
-            Assert.AreEqual(8, init[7]);
-            Assert.AreEqual(9, init[8]);
+            ClassicAssert.AreEqual(9, init.Count);
+            ClassicAssert.AreEqual(1, init[0]);
+            ClassicAssert.AreEqual(2, init[1]);
+            ClassicAssert.AreEqual(3, init[2]);
+            ClassicAssert.AreEqual(4, init[3]);
+            ClassicAssert.AreEqual(5, init[4]);
+            ClassicAssert.AreEqual(6, init[5]);
+            ClassicAssert.AreEqual(7, init[6]);
+            ClassicAssert.AreEqual(8, init[7]);
+            ClassicAssert.AreEqual(9, init[8]);
         }
         
         [Test]
@@ -183,19 +184,19 @@ namespace FTrees.Tests
             var (left, right) = list.SplitAt(5);
     
             // Verify the first part
-            Assert.AreEqual(5, left.Count);
-            Assert.AreEqual(1, left[0]);
-            Assert.AreEqual(2, left[1]);
-            Assert.AreEqual(3, left[2]);
-            Assert.AreEqual(4, left[3]);
-            Assert.AreEqual(5, left[4]);
+            ClassicAssert.AreEqual(5, left.Count);
+            ClassicAssert.AreEqual(1, left[0]);
+            ClassicAssert.AreEqual(2, left[1]);
+            ClassicAssert.AreEqual(3, left[2]);
+            ClassicAssert.AreEqual(4, left[3]);
+            ClassicAssert.AreEqual(5, left[4]);
     
             // Verify the second part
-            Assert.AreEqual(4, right.Count);
-            Assert.AreEqual(6, right[0]);
-            Assert.AreEqual(7, right[1]);
-            Assert.AreEqual(8, right[2]);
-            Assert.AreEqual(9, right[3]);
+            ClassicAssert.AreEqual(4, right.Count);
+            ClassicAssert.AreEqual(6, right[0]);
+            ClassicAssert.AreEqual(7, right[1]);
+            ClassicAssert.AreEqual(8, right[2]);
+            ClassicAssert.AreEqual(9, right[3]);
         }
         
         [Test]
@@ -205,16 +206,16 @@ namespace FTrees.Tests
             var list2 = ImmutableSeq.Create(6, 7, 8, 9);
             var concat = list1.Concat(list2);
     
-            Assert.AreEqual(9, concat.Count);
-            Assert.AreEqual(1, concat[0]);
-            Assert.AreEqual(2, concat[1]);
-            Assert.AreEqual(3, concat[2]);
-            Assert.AreEqual(4, concat[3]);
-            Assert.AreEqual(5, concat[4]);
-            Assert.AreEqual(6, concat[5]);
-            Assert.AreEqual(7, concat[6]);
-            Assert.AreEqual(8, concat[7]);
-            Assert.AreEqual(9, concat[8]);
+            ClassicAssert.AreEqual(9, concat.Count);
+            ClassicAssert.AreEqual(1, concat[0]);
+            ClassicAssert.AreEqual(2, concat[1]);
+            ClassicAssert.AreEqual(3, concat[2]);
+            ClassicAssert.AreEqual(4, concat[3]);
+            ClassicAssert.AreEqual(5, concat[4]);
+            ClassicAssert.AreEqual(6, concat[5]);
+            ClassicAssert.AreEqual(7, concat[6]);
+            ClassicAssert.AreEqual(8, concat[7]);
+            ClassicAssert.AreEqual(9, concat[8]);
         }
         
         [Test]
@@ -223,9 +224,9 @@ namespace FTrees.Tests
             var list = ImmutableSeq.Create(1, 2, 3, 4, 5, 6, 7, 8, 9, 10);
             var appendedList = list.Append(11); // Assuming `Append` is similar to `Add`
     
-            Assert.AreEqual(11, appendedList.Count);
-            Assert.AreEqual(11, appendedList.Last);   // Check if the last item is the appended one
-            Assert.AreNotSame(list, appendedList); // Ensure the original list remains unchanged
+            ClassicAssert.AreEqual(11, appendedList.Count);
+            ClassicAssert.AreEqual(11, appendedList.Last);   // Check if the last item is the appended one
+            ClassicAssert.AreNotSame(list, appendedList); // Ensure the original list remains unchanged
         }
 
         [Test]
@@ -234,9 +235,9 @@ namespace FTrees.Tests
             var list = ImmutableSeq.Create(1, 2, 3, 4, 5, 6, 7, 8, 9, 10);
             var prependedList = list.Prepend(0); // Assuming `Prepend` behaves like inserting at 0 index
     
-            Assert.AreEqual(11, prependedList.Count);
-            Assert.AreEqual(0, prependedList.Head);   // Check if the first item is the prepended one
-            Assert.AreNotSame(list, prependedList); // Ensure the original list remains unchanged
+            ClassicAssert.AreEqual(11, prependedList.Count);
+            ClassicAssert.AreEqual(0, prependedList.Head);   // Check if the first item is the prepended one
+            ClassicAssert.AreNotSame(list, prependedList); // Ensure the original list remains unchanged
         }
         
         [Test]
@@ -246,9 +247,9 @@ namespace FTrees.Tests
             // Assuming `RemoveAll` removes elements that match the condition
             IImmutableList<int> filteredList = list.Where(item => item % 2 != 0).ToImmutableList(); // Removes even numbers
     
-            Assert.AreEqual(3, filteredList.Count);
-            Assert.IsFalse(filteredList.Contains(2));
-            Assert.IsFalse(filteredList.Contains(4));
+            ClassicAssert.AreEqual(3, filteredList.Count);
+            ClassicAssert.IsFalse(filteredList.Contains(2));
+            ClassicAssert.IsFalse(filteredList.Contains(4));
         }
 
         [Test]
@@ -258,7 +259,7 @@ namespace FTrees.Tests
             // Assuming `IndexOf` finds the first occurrence of the specified value
             int index = list.IndexOf(2);
     
-            Assert.AreEqual(1, index); // Index of the first occurrence of 2
+            ClassicAssert.AreEqual(1, index); // Index of the first occurrence of 2
         }
 
         [Test]
@@ -268,7 +269,7 @@ namespace FTrees.Tests
             // Assuming `LastIndexOf` finds the last occurrence of the specified value
             int lastIndex = list.LastIndexOf(2);
     
-            Assert.AreEqual(3, lastIndex); // Index of the last occurrence of 2
+            ClassicAssert.AreEqual(3, lastIndex); // Index of the last occurrence of 2
         }
     }
 }

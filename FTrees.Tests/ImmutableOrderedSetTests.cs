@@ -1,4 +1,5 @@
 ﻿using NUnit.Framework;
+using NUnit.Framework.Legacy;
 
 namespace FTrees.Tests {
     
@@ -9,7 +10,7 @@ namespace FTrees.Tests {
         public void Construct_WithMultipleValues_ShouldBeSortedAndUnique()
         {
             var set = ImmutableOrderedSet.Create(3, 1, 2, 2, 3, 4, 5, 6, 7, 8, 9, 10);
-            Assert.AreEqual(new[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 }, set);
+            ClassicAssert.AreEqual(new[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 }, set);
         }
 
         [Test]
@@ -17,7 +18,7 @@ namespace FTrees.Tests {
         {
             var set = ImmutableOrderedSet.Create(1, 3, 4, 5, 6, 7, 8, 9, 10);
             var updatedSet = set.Add(2);
-            Assert.AreEqual(new[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 }, updatedSet);
+            ClassicAssert.AreEqual(new[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 }, updatedSet);
         }
 
         [Test]
@@ -25,7 +26,7 @@ namespace FTrees.Tests {
         {
             var set = ImmutableOrderedSet.Create(1, 2, 3, 4, 5, 6, 7, 8, 9);
             var updatedSet = set.Add(2);
-            Assert.AreEqual(new[] { 1, 2, 3, 4, 5, 6, 7, 8, 9 }, updatedSet);
+            ClassicAssert.AreEqual(new[] { 1, 2, 3, 4, 5, 6, 7, 8, 9 }, updatedSet);
         }
 
         [Test]
@@ -33,7 +34,7 @@ namespace FTrees.Tests {
         {
             var set = ImmutableOrderedSet.Create(1, 2, 3, 4, 5, 6, 7, 8, 9);
             var updatedSet = set.Remove(2);
-            Assert.AreEqual(new[] { 1, 3, 4, 5, 6, 7, 8, 9 }, updatedSet);
+            ClassicAssert.AreEqual(new[] { 1, 3, 4, 5, 6, 7, 8, 9 }, updatedSet);
         }
 
         [Test]
@@ -41,7 +42,7 @@ namespace FTrees.Tests {
         {
             var set = ImmutableOrderedSet.Create(1, 2, 3, 4, 5, 6, 7, 8, 9);
             var updatedSet = set.Remove(10);
-            Assert.AreEqual(new[] { 1, 2, 3, 4, 5, 6, 7, 8, 9 }, updatedSet);
+            ClassicAssert.AreEqual(new[] { 1, 2, 3, 4, 5, 6, 7, 8, 9 }, updatedSet);
         }
 
         [Test]
@@ -50,7 +51,7 @@ namespace FTrees.Tests {
             var set1 = ImmutableOrderedSet.Create(1, 3, 4, 5, 6, 7, 8, 9);
             var set2 = ImmutableOrderedSet.Create(2, 3, 4, 8, 9, 10, 11, 12);
             var mergedSet = set1.MergeWith(set2);
-            Assert.AreEqual(new[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12 }, mergedSet);
+            ClassicAssert.AreEqual(new[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12 }, mergedSet);
         }
     }
 }
