@@ -271,5 +271,21 @@ namespace FTrees.Tests
     
             ClassicAssert.AreEqual(3, lastIndex); // Index of the last occurrence of 2
         }
+
+        [Test]
+        public void TestRangeIndex()
+        {
+            ImmutableSeq<int> list = ImmutableSeq.Create(1, 2, 3, 4, 5);
+            var uut = list[2..^1];
+            CollectionAssert.AreEqual(new[]{3, 4}, uut);
+        }
+        
+        [Test]
+        public void TestIndex()
+        {
+            ImmutableSeq<int> list = ImmutableSeq.Create(1, 2, 3, 4, 5);
+            var x = list[^2];
+            ClassicAssert.AreEqual(4, x);
+        }
     }
 }

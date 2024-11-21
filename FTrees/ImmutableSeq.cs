@@ -48,9 +48,20 @@ namespace FTrees
                 if (idx == 0) return Head;
                 if (idx == Count - 1) return Last;
                 
-                int i = 0;
-                int target = idx;
-                return backing.LookupTree(ref target, ref i).Value;
+                return backing.LookupTree(idx, 0).Value;
+            }
+        }
+
+        public T this[Index index] => this[index.GetOffset(Count)];
+
+        public ImmutableSeq<T> this[Range range] {
+            get {
+                var start = range.Start.GetOffset(Count);
+                var end = range.End.GetOffset(Count);
+                var (_, rem) = splitAt(start);
+                var res = new ImmutableSeq<T>(rem);
+                if (end >= Count) return res;
+                return new(res.splitAt(end-start).Item1);
             }
         }
 
@@ -263,7 +274,7 @@ namespace FTrees
         // guaranteed to be O(logn)
         // like SplitTree, but doesn't generate unnecessary new trees
         // also should check for the first `i > target` and stop
-        internal static ref readonly T LookupTree<T>(this FTree<T, Size> tree, ref int target, ref int i) 
+        internal static ref readonly T LookupTree<T>(this FTree<T, Size> tree, int target, int i) 
         where T : IMeasured<Size>
         {
             if (tree is FTree<T, Size>.Single s) 
@@ -272,22 +283,22 @@ namespace FTrees
             if (tree is FTree<T, Size>.Deep(var pr, var m, var sf)) {
                 var vpr = i + pr.Measure.Value;
                 if (vpr > target) 
-                    return ref lookupDigit(ref target, ref i, pr.Values);
+                    return ref lookupDigit(target, i, pr.Values);
 
                 i = vpr;
                 var mValue = m.Value;
                 var vm = vpr + mValue.Measure.Value;
                 if (vm > target) {
-                    var xs = LookupTree(mValue, ref target, ref i);
-                    return ref lookupNode(ref target, ref i, xs);
+                    var xs = LookupTree(mValue, target, i);
+                    return ref lookupNode(target, i, xs);
                 }
 
                 i = vm;
-                return ref lookupDigit(ref target, ref i, sf.Values);
+                return ref lookupDigit(target, i, sf.Values);
             }
             throw new InvalidOperationException();
             
-            static ref readonly T lookupNode(ref int target, ref int i, Node<T, Size> node) {
+            static ref readonly T lookupNode(int target, int i, Node<T, Size> node) {
                 ref readonly var fst = ref node.First;
                 var i1 = i + fst.Measure.Value;
                 if (i1 > target) 
@@ -299,7 +310,7 @@ namespace FTrees
                 return ref node.Third;
             }
             
-            static ref readonly T lookupDigit(ref int target, ref int i, T[] digit) {
+            static ref readonly T lookupDigit(int target, int i, T[] digit) {
                 if (digit.Length == 1)
                     return ref digit[0];
                 for (var idx = 0; idx < digit.Length; ++idx) {
