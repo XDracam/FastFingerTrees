@@ -8,8 +8,9 @@ namespace FTrees.Benchmarks {
         [Params(
             // 100,
             // 1000,
-            10000//,
+            // 10000,
             // 30000
+            Constants.ParamsSize
         )]
         public int Count;
 
@@ -45,19 +46,19 @@ namespace FTrees.Benchmarks {
             _ = testOrderedSet1.MergeWith(testOrderedSet2);
         }
 
-        [Benchmark]
-        public void ImmutableHashSetMerge() {
-            _ = testHashSet1.Union(testHashSet2);
-        }
-
-        [Benchmark]
-        public void ImmutableSortedSetMerge() {
-            _ = testSortedSet1.Union(testSortedSet2);
-        }
-
-        [Benchmark]
-        public void ImmutableArrayMerge() {
-            _ = testArray1.AddRange(testArray2);
-        }
+        // [Benchmark]
+        // public void ImmutableHashSetMerge() {
+        //     _ = testHashSet1.Union(testHashSet2);
+        // }
+        //
+        // [Benchmark]
+        // public void ImmutableSortedSetMerge() {
+        //     _ = testSortedSet1.Union(testSortedSet2);
+        // }
+        //
+        // [Benchmark]
+        // public void ImmutableArrayMerge() {
+        //     _ = testArray1.AddRange(testArray2);
+        // }
     }
 }

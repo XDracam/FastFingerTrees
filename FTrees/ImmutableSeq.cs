@@ -234,17 +234,28 @@ namespace FTrees
 #endregion
     }
     
-    internal readonly struct Size : IMeasure<Size>
+    internal readonly struct Size(int value) : IMeasure<Size>
     {
-        public readonly int Value;
-        public Size(int value) => Value = value;
-        public Size Add(in Size other) => new(Value + other.Value);
+        public readonly int Value = value;
+
+        public static Size Add(params ReadOnlySpan<Size> values) {
+            var sum = 0;
+            for (var i = 0; i < values.Length; ++i) 
+                sum += values[i].Value;
+            return new(sum);
+        }
+
+        public static Size Add<T>(ReadOnlySpan<T> values) where T : IMeasured<Size> {
+            var sum = 0;
+            for (var i = 0; i < values.Length; ++i) 
+                sum += values[i].Measure.Value;
+            return new(sum);
+        }
     }
 
-    internal readonly struct SeqElem<T> : IMeasured<Size>
+    internal readonly struct SeqElem<T>(T value) : IMeasured<Size>
     {
-        public readonly T Value;
-        public SeqElem(T value) => Value = value;
+        public readonly T Value = value;
         public Size Measure => new(1);
     }
 

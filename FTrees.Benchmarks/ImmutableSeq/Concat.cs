@@ -14,8 +14,9 @@ namespace FTrees.Benchmarks {
         [Params(
             // 100,
             // 1000,
-            10000//,
+            // 10000,
             // 30000
+            Constants.ParamsSize
         )]
         public int Count;
 
@@ -30,20 +31,20 @@ namespace FTrees.Benchmarks {
 
         }
         
-        [Benchmark]
-        public void ListConcat() {
-            _ = list.Concat(immutableArray).ToList(); // "immutable concat"
-        }
-        
-        [Benchmark]
-        public void ImmutableArrayConcat() {
-            _ = immutableArray.AddRange(immutableArray);
-        }
-        
-        [Benchmark]
-        public void ImmutableListConcat() {
-            _ = immutableList.AddRange(immutableArray);
-        }
+        // [Benchmark]
+        // public void ListConcat() {
+        //     _ = list.Concat(immutableArray).ToList(); // "immutable concat"
+        // }
+        //
+        // [Benchmark]
+        // public void ImmutableArrayConcat() {
+        //     _ = immutableArray.AddRange(immutableArray);
+        // }
+        //
+        // [Benchmark]
+        // public void ImmutableListConcat() {
+        //     _ = immutableList.AddRange(immutableArray);
+        // }
         
         [Benchmark]
         public void ImmutableSeqConcat()

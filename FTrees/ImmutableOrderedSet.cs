@@ -127,14 +127,14 @@ namespace FTrees
         ) where T : IMeasured<TKey> where TKey : struct, IMeasure<TKey>, IComparable<TKey> {
             if (tree is FTree<T, TKey>.Single s) return ref s.Value;
             if (tree is FTree<T, TKey>.Deep(var pr, var m, var sf)) {
-                var vpr = i.Add(pr.Measure);
+                var vpr = TKey.Add(i, pr.Measure);
                 if (vpr.CompareTo(target) <= 0) {
                     return ref lookupDigit(ref target, ref i, pr.Values);
                 }
 
                 i = vpr;
                 var mValue = m.Value;
-                var vm = vpr.Add(mValue.Measure);
+                var vm = TKey.Add(vpr, mValue.Measure);
                 if (vm.CompareTo(target) <= 0) {
                     var xs = LookupTree(mValue, ref target, ref i);
                     return ref lookupNode(ref target, ref i, xs);
@@ -147,12 +147,11 @@ namespace FTrees
             
             static ref readonly T lookupNode(ref TKey target, ref TKey i, Node<T, TKey> node) {
                 ref readonly var fst = ref node.First;
-                var i1 = i.Add(fst.Measure);
+                var i1 = TKey.Add(i, fst.Measure);
                 if (i1.CompareTo(target) <= 0) 
                     return ref fst;
                 ref readonly var snd = ref node.Second;
-                var i2 = i1.Add(snd.Measure);
-                if (!node.HasThird || i2.CompareTo(target) <= 0) 
+                if (!node.HasThird || TKey.Add(i1, snd.Measure).CompareTo(target) <= 0) 
                     return ref snd;
                 return ref node.Third;
             }
@@ -162,7 +161,7 @@ namespace FTrees
                     return ref digit[0];
                 for (var idx = 0; idx < digit.Length; ++idx) {
                     ref var curr = ref digit[idx];
-                    var newI = i.Add(curr.Measure);
+                    var newI = TKey.Add(i, curr.Measure);
                     if (newI.CompareTo(target) > 0) return ref curr;
                     i = newI;
                 }
@@ -171,15 +170,11 @@ namespace FTrees
         }
     }
 
-    internal readonly struct Key<T> : IMeasure<Key<T>>, IComparable<Key<T>> where T : IComparable<T> 
+    internal readonly struct Key<T>(T value) : IMeasure<Key<T>>, IComparable<Key<T>>
+        where T : IComparable<T>
     {
-        public readonly bool HasValue;
-        public readonly T Value;
-        
-        public Key(T value) {
-            HasValue = true;
-            Value = value;
-        }
+        public readonly bool HasValue = true;
+        public readonly T Value = value;
 
         public Key<T> Add(in Key<T> other) => other.HasValue ? other : this; // always the highest key
 
@@ -194,6 +189,22 @@ namespace FTrees
 
         public static bool operator<=(Key<T> left, Key<T> right) => left.CompareTo(right) <= 0;
         public static bool operator>=(Key<T> left, Key<T> right) => left.CompareTo(right) >= 0;
+        
+        public static Key<T> Add(params ReadOnlySpan<Key<T>> values) {
+            for (var i = values.Length - 1; i >= 0; --i) {
+                ref readonly var curr = ref values[i];
+                if (curr.HasValue) return curr;
+            }
+            return default;
+        }
+
+        public static Key<T> Add<A>(ReadOnlySpan<A> values) where A : IMeasured<Key<T>> {
+            for (var i = values.Length - 1; i >= 0; --i) {
+                var curr = values[i].Measure;
+                if (curr.HasValue) return curr;
+            }
+            return default;
+        }
     }
 
     internal readonly struct OrderedElem<T> : IMeasured<Key<T>> where T : IComparable<T>

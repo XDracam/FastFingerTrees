@@ -14,8 +14,9 @@ namespace FTrees.Benchmarks {
         [Params(
             // 100,
             // 1000,
-            10000//,
+            // 10000,
             // 30000
+            Constants.ParamsSize
         )]
         public int Count;
 
@@ -30,23 +31,23 @@ namespace FTrees.Benchmarks {
 
         }
         
-        [Benchmark]
-        public void ListEnumerate()
-        {
-            foreach (var item in list) { }
-        }
-        
-        [Benchmark]
-        public void ImmutableArrayEnumerate()
-        {
-            foreach (var item in immutableArray) { }
-        }
-        
-        [Benchmark]
-        public void ImmutableListEnumerate()
-        {
-            foreach (var item in immutableList) { }
-        }
+        // [Benchmark]
+        // public void ListEnumerate()
+        // {
+        //     foreach (var item in list) { }
+        // }
+        //
+        // [Benchmark]
+        // public void ImmutableArrayEnumerate()
+        // {
+        //     foreach (var item in immutableArray) { }
+        // }
+        //
+        // [Benchmark]
+        // public void ImmutableListEnumerate()
+        // {
+        //     foreach (var item in immutableList) { }
+        // }
         
         [Benchmark]
         public void ImmutableSeqEnumerate()

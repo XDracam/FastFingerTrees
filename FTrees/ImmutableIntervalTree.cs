@@ -72,26 +72,45 @@ namespace FTrees
         }
     }
     
-    public readonly struct Interval<T, P> : IMeasured<KeyPrio<P>> where P : IComparable<P>
+    public readonly struct Interval<T, P>(T value, P low, P high) : IMeasured<KeyPrio<P>>
+        where P : IComparable<P>
     {
-        public readonly T Value;
-        public readonly P Low, High; // inclusive
-        public Interval(T value, P low, P high) => 
-            (Value, Low, High) = (value, low, high);
+        public readonly T Value = value;
+        public readonly P Low = low; // inclusive
+        public readonly P High = high; // inclusive
 
         KeyPrio<P> IMeasured<KeyPrio<P>>.Measure => measure;
         internal KeyPrio<P> measure => new(new Key<P>(Low), new Prio<P>(High));
     }
 
-    internal readonly struct KeyPrio<P> : IMeasure<KeyPrio<P>> where P : IComparable<P>
+    internal readonly struct KeyPrio<P>(Key<P> key, Prio<P> prio)
+        : IMeasure<KeyPrio<P>>, IMeasured<Key<P>>, IMeasured<Prio<P>>
+        where P : IComparable<P>
     {
-        public readonly Key<P> Key;
-        public readonly Prio<P> Prio;
-        public KeyPrio(Key<P> key, Prio<P> prio) => (Key, Prio) = (key, prio);
-
-        public KeyPrio<P> Add(in KeyPrio<P> other) => new(Key.Add(other.Key), Prio.Add(other.Prio));
+        public readonly Key<P> Key = key;
+        public readonly Prio<P> Prio = prio;
 
         public bool AtLeast(P k) => new Prio<P>(k).CompareTo(Prio) <= 0;
         public bool Greater(P k) => Key.CompareTo(new(k)) > 0;
+        
+        public static KeyPrio<P> Add(params ReadOnlySpan<KeyPrio<P>> values) {
+            var key = Key<P>.Add(values);
+            var prio = Prio<P>.Add(values);
+            return new(key, prio);
+        }
+
+        public static KeyPrio<P> Add<T>(ReadOnlySpan<T> values) where T : IMeasured<KeyPrio<P>> {
+            Key<P> key = default;
+            Prio<P> prio = default;
+            for (var i = 0; i < values.Length; ++i) {
+                var m = values[i].Measure;
+                key = Key<P>.Add(key, m.Key);
+                prio = Prio<P>.Add(prio, m.Prio);
+            }
+            return new(key, prio);
+        }
+
+        Key<P> IMeasured<Key<P>>.Measure => Key;
+        Prio<P> IMeasured<Prio<P>>.Measure => Prio;
     }
 }

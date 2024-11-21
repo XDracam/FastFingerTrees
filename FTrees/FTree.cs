@@ -37,7 +37,6 @@ internal static class Utils
     internal static FTree<A, V> app3<A, V>(FTree<A, V> self, Digit<A, V> ts, FTree<A, V> other)
     where A : IMeasured<V> where V : struct, IMeasure<V> {
         return (self, other) switch {
-            // TODO: faster if checking lengths of individual parts
             (FTree<A, V>.EmptyT, var xs) => prependDigit(ts, xs),
             (var xs, FTree<A, V>.EmptyT) => appendDigit(ts, xs),
             (FTree<A, V>.Single(var x), var xs) => prependDigit(ts, xs).Prepend(x),
@@ -111,7 +110,7 @@ internal static class Utils
         if (digit.Values.Length == 1)
             return new([], digit.Head, []);
         for (var idx = 0; idx < digit.Values.Length; ++idx) {
-            i = i.Add(digit.Values[idx].Measure);
+            i = V.Add(i, digit.Values[idx].Measure);
             if (p(i)) return split(digit.Values, idx);
         }
         // not found anything, take last element
@@ -173,7 +172,7 @@ where T : IMeasured<V> where V : struct, IMeasure<V>
             measure = new(measureNow);
         }
 
-        private V measureNow() => Left.Measure.Add(Spine.Value.Measure).Add(Right.Measure);
+        private V measureNow() => V.Add(Left.Measure, Spine.Value.Measure, Right.Measure);
         
         public void Deconstruct(
             out Digit<T, V> left,
@@ -216,24 +215,20 @@ where T : IMeasured<V> where V : struct, IMeasure<V>
         _ => throw new InvalidOperationException()
     };
     
-    public FTree<T, V> Prepend(T toAdd, bool isLazy = true) => this switch { // in paper: a <| this
+    public FTree<T, V> Prepend(T toAdd) => this switch { // in paper: a <| this
         EmptyT => new Single(toAdd),
         Single(var x) => new Deep(new Digit<T, V>(toAdd), new(FTree<Node<T, V>, V>.EmptyT.Instance), new Digit<T, V>(x)),
         Deep({Values: {Length: 4} l}, var m, var sf) => 
-            isLazy
-                ? new Deep(new Digit<T, V>(toAdd, l[0]), new(() => m.Value.Prepend(new Node<T, V>(l[1], l[2], l[3]), true)), sf)
-                : new Deep(new Digit<T, V>(toAdd, l[0]), new(m.Value.Prepend(new Node<T, V>(l[1], l[2], l[3]), false)), sf), 
+            new Deep(new Digit<T, V>(toAdd, l[0]), new(() => m.Value.Prepend(new Node<T, V>(l[1], l[2], l[3]))), sf),
         Deep(var pr, var m, var sf) => new Deep(pr.Prepend(toAdd), m, sf),
         _ => throw new InvalidOperationException()
     };
     
-    public FTree<T, V> Append(T toAdd, bool isLazy = true) => this switch { // in paper: this |> a
+    public FTree<T, V> Append(T toAdd) => this switch { // in paper: this |> a
         EmptyT => new Single(toAdd),
         Single(var x) => new Deep(new Digit<T, V>(x), new(FTree<Node<T, V>, V>.EmptyT.Instance), new Digit<T, V>(toAdd)),
         Deep(var pr, var m, {Values: {Length: 4} r}) => 
-            isLazy 
-                ? new Deep(pr, new(() => m.Value.Append(new Node<T, V>(r[0], r[1], r[2]), true)), new Digit<T, V>(r[3], toAdd))
-                : new Deep(pr, new(m.Value.Append(new Node<T, V>(r[0], r[1], r[2]), false)), new Digit<T, V>(r[3], toAdd)), 
+            new Deep(pr, new(() => m.Value.Append(new Node<T, V>(r[0], r[1], r[2]))), new Digit<T, V>(r[3], toAdd)),
         Deep(var pr, var m, var sf) => new Deep(pr, m, sf.Append(toAdd)),
         _ => throw new InvalidOperationException()
     };
@@ -256,7 +251,7 @@ where T : IMeasured<V> where V : struct, IMeasure<V>
                 var firstDigitLength = length / 2;
                 return new Deep(
                     new Digit<T, V>(array[..firstDigitLength]), 
-                    new LazyThunk<FTree<Node<T, V>, V>>(() => FTree<Node<T, V>, V>.EmptyT.Instance), 
+                    new LazyThunk<FTree<Node<T, V>, V>>(FTree<Node<T, V>, V>.EmptyT.Instance), 
                     new Digit<T, V>(array[firstDigitLength..])
                 );
             default:
@@ -303,16 +298,16 @@ where T : IMeasured<V> where V : struct, IMeasure<V>
             case Single(var s): 
                 return (Empty, s, Empty);
             case Deep(var pr, var m, var sf): 
-                var vpr = i.Add(pr.Measure);
+                var vpr = V.Add(i, pr.Measure);
                 if (p(vpr)) {
                     var (l, x, r) = splitDigit(p, i, pr);
                     return (createRangeOptimized(l), x, deepL(r, m, sf));
                 }
-                var vm = vpr.Add(m.Value.Measure);
+                var vm = V.Add(vpr, m.Value.Measure);
                 if (p(vm)) {
                     var (ml, xs, mr) = m.Value.SplitTree(p, vpr);
-                    var (l, x, r) = splitDigit(p, vpr.Add(ml.Measure), xs.ToDigit());
-                    return (deepR<T, V>(pr, new(ml), l), x, deepL<T, V>(r, new(mr), sf));
+                    var (l, x, r) = splitDigit(p, V.Add(vpr, ml.Measure), xs.ToDigit());
+                    return (deepR(pr, new(ml), l), x, deepL(r, new(mr), sf));
                 }
                 else {
                     var (l, x, r) = splitDigit(p, vm, sf);
@@ -432,13 +427,13 @@ public static class FTree
 internal readonly struct Digit<T, V> where T : IMeasured<V> where V : struct, IMeasure<V>
 {
     public readonly T[] Values; // between 1 and 4 values
-    private readonly LazyThunk<V> measure; // caching this can yield up to 2x performance for insertions
+    private readonly V measure; // could be lazy, but that adds overhead on average
 
-    public V Measure => measure.Value;
+    public V Measure => measure;
 
     public Digit(params ReadOnlySpan<T> values) {
         Values = values.ToArray();
-        measure = new(calcMeasure());
+        measure = V.Add<T>(Values);
     }
 
     public TRes ReduceRight<TRes>(Func<T, TRes, TRes> reduceOp, TRes other) {
@@ -474,17 +469,14 @@ internal readonly struct Digit<T, V> where T : IMeasured<V> where V : struct, IM
     
     public T Last => Values[^1];
     public ReadOnlySpan<T> Init => Values.AsSpan()[..^1];
-    
-    private V calcMeasure() {
-        if (Values.Length == 0) return default;
-        var res = Values[0].Measure;
-        for (int i = 1; i < Values.Length; ++i) 
-            res = res.Add(Values[i].Measure);
-        return res;
-    }
 }
 
-public interface IMeasure<TSelf> where TSelf : struct { TSelf Add(in TSelf other); }
+public interface IMeasure<TSelf> where TSelf : struct, IMeasure<TSelf>
+{
+    static abstract TSelf Add(params ReadOnlySpan<TSelf> values);
+    static abstract TSelf Add<T>(ReadOnlySpan<T> values) where T : IMeasured<TSelf>;
+}
+
 public interface IMeasured<V> where V : struct, IMeasure<V> { V Measure { get; } }
 
 internal sealed class Node<T, V> : IMeasured<V> where T : IMeasured<V> where V : struct, IMeasure<V>
@@ -499,8 +491,8 @@ internal sealed class Node<T, V> : IMeasured<V> where T : IMeasured<V> where V :
         get {
             if (_hasMeasure) return _measure;
             _measure = HasThird
-                ? First.Measure.Add(Second.Measure).Add(Third.Measure)
-                : First.Measure.Add(Second.Measure);
+                ? V.Add(First.Measure, Second.Measure, Third.Measure)
+                : V.Add(First.Measure, Second.Measure);
             _hasMeasure = true;
             return _measure;
         }
@@ -533,17 +525,13 @@ internal sealed class Node<T, V> : IMeasured<V> where T : IMeasured<V> where V :
     public Digit<T, V> ToDigit() => HasThird ? new Digit<T, V>(First, Second, Third) : new Digit<T, V>(First, Second);
 }
 
-internal readonly struct View<T, V> where T : IMeasured<V> where V : struct, IMeasure<V>
+internal readonly struct View<T, V>(T head, LazyThunk<FTree<T, V>> tail)
+    where T : IMeasured<V>
+    where V : struct, IMeasure<V>
 {
-    public readonly bool IsCons;
-    public readonly T Head;
-    public readonly LazyThunk<FTree<T, V>> Tail;
-
-    public View(T head, LazyThunk<FTree<T, V>> tail) {
-        IsCons = true;
-        Head = head;
-        Tail = tail;
-    }
+    public readonly bool IsCons = true;
+    public readonly T Head = head;
+    public readonly LazyThunk<FTree<T, V>> Tail = tail;
 }
 
 // Either a Lazy<T> or an already calculated value.

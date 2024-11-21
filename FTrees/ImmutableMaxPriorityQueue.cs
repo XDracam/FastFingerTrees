@@ -50,15 +50,11 @@ namespace FTrees
         // 2. Could implement "all elements >= k" in theta(m log(n/m)) time
     }
     
-    internal readonly struct Prio<P> : IMeasure<Prio<P>>, IComparable<Prio<P>> where P : IComparable<P> 
+    internal readonly struct Prio<P>(P value) : IMeasure<Prio<P>>, IComparable<Prio<P>>
+        where P : IComparable<P>
     {
-        public readonly bool HasValue;
-        public readonly P Value; // none is "negative infinity"
-        
-        public Prio(P value) {
-            HasValue = true;
-            Value = value;
-        }
+        public readonly bool HasValue = true; // still false when `default`ed
+        public readonly P Value = value; // none is "negative infinity"
 
         public Prio<P> Add(in Prio<P> other) {
             return HasValue
@@ -76,6 +72,46 @@ namespace FTrees
         
         public static bool operator<=(Prio<P> left, Prio<P> right) => left.CompareTo(right) <= 0;
         public static bool operator>=(Prio<P> left, Prio<P> right) => left.CompareTo(right) >= 0;
+        
+        public static Prio<P> Add(params ReadOnlySpan<Prio<P>> values) {
+            Prio<P> result = default;
+            var i = 0;
+            // step 1: find first result that has value
+            for (; i < values.Length; ++i) {
+                ref readonly var curr = ref values[i];
+                if (curr.HasValue) {
+                    result = curr;
+                    break;
+                }
+            }
+            // step 2: find maximum value
+            for (; i < values.Length; ++i) {
+                ref readonly var curr = ref values[i];
+                if (curr.CompareTo(result) >= 0)
+                    result = curr;
+            }
+            return result;
+        }
+
+        public static Prio<P> Add<T>(ReadOnlySpan<T> values) where T : IMeasured<Prio<P>> {
+            Prio<P> result = default;
+            var i = 0;
+            // step 1: find first result that has value
+            for (; i < values.Length; ++i) {
+                var curr = values[i].Measure;
+                if (curr.HasValue) {
+                    result = curr;
+                    break;
+                }
+            }
+            // step 2: find maximum value
+            for (; i < values.Length; ++i) {
+                var curr = values[i].Measure;
+                if (curr.CompareTo(result) >= 0)
+                    result = curr;
+            }
+            return result;
+        }
     }
 
     internal readonly struct PrioElem<T, P> : IMeasured<Prio<P>> where P : IComparable<P>
