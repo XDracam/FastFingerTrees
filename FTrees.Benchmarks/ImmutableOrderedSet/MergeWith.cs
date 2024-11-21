@@ -43,7 +43,7 @@ namespace FTrees.Benchmarks {
 
         [Benchmark]
         public void ImmutableOrderedSetMerge() {
-            _ = testOrderedSet1.MergeWith(testOrderedSet2);
+            var x = testOrderedSet1.MergeWith(testOrderedSet2);
         }
 
         // [Benchmark]

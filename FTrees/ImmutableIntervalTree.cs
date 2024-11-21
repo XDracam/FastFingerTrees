@@ -50,7 +50,7 @@ namespace FTrees
                 if (!view.IsCons) return xs;
                 // ReSharper disable once AccessToModifiedClosure // false positive
                 var (l, r) = xs.Split(x => x.Key > view.Head.measure.Key);
-                return l.Concat(merge(view.Tail.Value, r).Prepend(view.Head));
+                return l.Concat(merge(view.Tail, r).Prepend(view.Head));
             }
         }
 
@@ -67,7 +67,7 @@ namespace FTrees
             ImmutableStack<Interval<T, P>> matches(FTree<Interval<T, P>, KeyPrio<P>> xs) {
                 var view = FTree.toViewL(xs.DropUntil(x => x.AtLeast(low)));
                 if (!view.IsCons) return ImmutableStack<Interval<T, P>>.Empty;
-                return matches(view.Tail.Value).Push(view.Head);
+                return matches(view.Tail).Push(view.Head);
             }
         }
     }

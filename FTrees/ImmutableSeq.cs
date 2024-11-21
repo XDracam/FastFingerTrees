@@ -266,7 +266,9 @@ namespace FTrees
         internal static ref readonly T LookupTree<T>(this FTree<T, Size> tree, ref int target, ref int i) 
         where T : IMeasured<Size>
         {
-            if (tree is FTree<T, Size>.Single s) return ref s.Value;
+            if (tree is FTree<T, Size>.Single s) 
+                return ref s.Value;
+            
             if (tree is FTree<T, Size>.Deep(var pr, var m, var sf)) {
                 var vpr = i + pr.Measure.Value;
                 if (vpr > target) 

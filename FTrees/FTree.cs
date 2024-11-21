@@ -44,7 +44,7 @@ internal static class Utils
             (FTree<A, V>.Deep(var pr1, var m1, var sf1), FTree<A, V>.Deep(var pr2, var m2, var sf2)) => 
                 new FTree<A, V>.Deep(
                     pr1,
-                    new LazyThunk<FTree<Node<A, V>, V>>(() => app3(
+                    new(() => app3(
                         m1.Value,
                         new Digit<Node<A, V>, V>(nodes<A, V>(concat(sf1.Values, ts.Values, pr2.Values))), 
                         m2.Value
@@ -156,31 +156,33 @@ where T : IMeasured<V> where V : struct, IMeasure<V>
 
     internal sealed class Deep : FTree<T, V>
     {
-        private readonly LazyThunk<V> measure;
+        private LazyThunkClass<V> measure; // must be mutable for proper caching
         public readonly Digit<T, V> Left;
-        public readonly LazyThunk<FTree<Node<T, V>, V>> Spine;
+        private LazyThunkClass<FTree<Node<T, V>, V>> spine;  // must be mutable for proper caching
         public readonly Digit<T, V> Right;
+
+        public FTree<Node<T, V>, V> Spine => spine.Value;
 
         public Deep(
             Digit<T, V> left,
-            LazyThunk<FTree<Node<T, V>, V>> spine,
+            LazyThunkClass<FTree<Node<T, V>, V>> spine,
             Digit<T, V> right
         ) {
             Left = left;
-            Spine = spine;
+            this.spine = spine;
             Right = right;
             measure = new(measureNow);
         }
 
-        private V measureNow() => V.Add(Left.Measure, Spine.Value.Measure, Right.Measure);
+        private V measureNow() => V.Add(Left.Measure, Spine.Measure, Right.Measure);
         
         public void Deconstruct(
             out Digit<T, V> left,
-            out LazyThunk<FTree<Node<T, V>, V>> spine,
+            out LazyThunkClass<FTree<Node<T, V>, V>> outSpine,
             out Digit<T, V> right
         ) {
             left = this.Left;
-            spine = this.Spine;
+            outSpine = this.spine;
             right = this.Right;
         }
 
@@ -251,7 +253,7 @@ where T : IMeasured<V> where V : struct, IMeasure<V>
                 var firstDigitLength = length / 2;
                 return new Deep(
                     new Digit<T, V>(array[..firstDigitLength]), 
-                    new LazyThunk<FTree<Node<T, V>, V>>(FTree<Node<T, V>, V>.EmptyT.Instance), 
+                    new(FTree<Node<T, V>, V>.EmptyT.Instance), 
                     new Digit<T, V>(array[firstDigitLength..])
                 );
             default:
@@ -262,10 +264,7 @@ where T : IMeasured<V> where V : struct, IMeasure<V>
                 // Note: node needs 2 or 3 elements
                 return new Deep(
                     leftDigit, 
-                    new LazyThunk<FTree<Node<T, V>, V>>(() => {
-                        var nodeArr = nodes<T, V>(arrForNodes);
-                        return FTree<Node<T, V>, V>.createRangeOptimized(nodeArr);
-                    }),
+                    new(() => FTree<Node<T, V>, V>.createRangeOptimized(nodes<T, V>(arrForNodes))),
                     rightDigit
                 );
         }
@@ -279,7 +278,7 @@ where T : IMeasured<V> where V : struct, IMeasure<V>
         _ => throw new InvalidOperationException()
     };
 
-    public FTree<T, V> Tail => toViewL(this).Tail.Value;
+    public FTree<T, V> Tail => toViewL(this).Tail;
     
     public T Last => this switch {
         Single(var x) => x,
@@ -287,7 +286,7 @@ where T : IMeasured<V> where V : struct, IMeasure<V>
         _ => throw new InvalidOperationException()
     };
     
-    public FTree<T, V> Init => toViewR(this).Tail.Value;
+    public FTree<T, V> Init => toViewR(this).Tail;
 
     // in paper: |><| (wtf)
     public FTree<T, V> Concat(FTree<T, V> other) => app3(this, new Digit<T, V>([]), other);
@@ -377,7 +376,7 @@ public static class FTree
     
     internal static FTree<A, V> deepL<A, V>(
         ReadOnlySpan<A> pr, 
-        LazyThunk<FTree<Node<A, V>, V>> m, 
+        LazyThunkClass<FTree<Node<A, V>, V>> m, 
         Digit<A, V> sf
     ) where A : IMeasured<V> where V : struct, IMeasure<V> {
         if (pr.Length > 0) 
@@ -406,7 +405,7 @@ public static class FTree
     
     internal static FTree<A, V> deepR<A, V>(
         Digit<A, V> pr,
-        LazyThunk<FTree<Node<A, V>, V>> m, 
+        LazyThunkClass<FTree<Node<A, V>, V>> m, 
         ReadOnlySpan<A> sf
     ) where A : IMeasured<V> where V : struct, IMeasure<V> {
         if (sf.Length > 0) 
@@ -529,27 +528,64 @@ internal readonly struct View<T, V>(T head, LazyThunk<FTree<T, V>> tail)
     where T : IMeasured<V>
     where V : struct, IMeasure<V>
 {
+    public View() : this(default, default) { }
     public readonly bool IsCons = true;
     public readonly T Head = head;
-    public readonly LazyThunk<FTree<T, V>> Tail = tail;
+    public FTree<T, V> Tail => tail.Value;
 }
 
-// Either a Lazy<T> or an already calculated value.
+// Either a producer or an already calculated value.
 // The extra level of indirection adds performance when initialized eagerly.
-internal readonly struct LazyThunk<T>
+// A struct is worse in some cases, e.g. when reusing the thunk in case of Deep.
+internal sealed class LazyThunkClass<T>
 {
-    private readonly T _value;
-    private readonly FastLazy<T> _lazy;
+    private bool _hasValue;
+    private T _value;
+    private Func<T> _producer;
 
-    public T Value => _lazy == null ? _value : _lazy.Value;
+    public T Value { get {
+        if (!_hasValue) {
+            _value = _producer();
+            _hasValue = true;
+            _producer = null;
+        }
+        return _value;
+    }}
+
+    public LazyThunkClass(T value) {
+        _value = value;
+        _hasValue = true;
+    }
+
+    public LazyThunkClass(Func<T> getter) {
+        _producer = getter;
+    }
+}
+
+// Either a producer or an already calculated value.
+// The extra level of indirection adds performance when initialized eagerly.
+// Use carefully! You don't want to copy this by accident, making the cached value useless.
+internal struct LazyThunk<T>
+{
+    private bool _hasValue;
+    private T _value;
+    private Func<T> _producer;
+
+    public T Value { get {
+        if (!_hasValue) {
+            _value = _producer();
+            _hasValue = true;
+            _producer = null;
+        }
+        return _value;
+    }}
 
     public LazyThunk(T value) {
         _value = value;
-        _lazy = null;
+        _hasValue = true;
     }
 
     public LazyThunk(Func<T> getter) {
-        _value = default;
-        _lazy = new(getter);
+        _producer = getter;
     }
 }

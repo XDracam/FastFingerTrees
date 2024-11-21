@@ -80,8 +80,8 @@ namespace FTrees
                 // ReSharper disable once AccessToModifiedClosure // false positive
                 var (l, x, r) = xs.SplitTree(x => x >= view.Head.Measure, new());
                 if (x.Measure.CompareTo(view.Head.Measure) == 0)
-                    return l.Concat(merge(view.Tail.Value, r).Prepend(x));
-                return l.Concat(merge(view.Tail.Value, r.Prepend(x)).Prepend(view.Head));
+                    return l.Concat(merge(view.Tail, r).Prepend(x));
+                return l.Concat(merge(view.Tail, r.Prepend(x)).Prepend(view.Head));
             }
         }
 
