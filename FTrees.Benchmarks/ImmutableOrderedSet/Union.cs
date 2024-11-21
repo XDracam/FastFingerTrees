@@ -1,10 +1,11 @@
 ﻿using System.Collections.Immutable;
 using System.Linq;
 using BenchmarkDotNet.Attributes;
+using DracTec.FTrees.Benchmarks.ImmutableSeq;
 
-namespace FTrees.Benchmarks;
+namespace DracTec.FTrees.Benchmarks.ImmutableOrderedSet;
 
-public class MergeWith {
+public class Union {
         
     [Params(
         // 100,
@@ -44,7 +45,7 @@ public class MergeWith {
 
     [Benchmark]
     public void ImmutableOrderedSetMerge() {
-        var x = testOrderedSet1.MergeWith(testOrderedSet2);
+        var x = testOrderedSet1.Union(testOrderedSet2);
     }
 
     [Benchmark]

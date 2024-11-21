@@ -1,4 +1,4 @@
-﻿namespace FTrees.Benchmarks;
+﻿namespace DracTec.FTrees.Benchmarks.ImmutableSeq;
 
 public static class Constants
 {

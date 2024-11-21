@@ -4,6 +4,7 @@
     <OutputType>Library</OutputType>
     <TargetFramework>net9.0</TargetFramework>
     <LangVersion>default</LangVersion>
+    <RootNamespace>DracTec.FTrees.Tests</RootNamespace>
   </PropertyGroup>
 
   <ItemGroup>

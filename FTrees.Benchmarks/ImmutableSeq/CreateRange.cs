@@ -2,50 +2,50 @@
 using System.Collections.Immutable;
 using BenchmarkDotNet.Attributes;
 
-namespace FTrees.Benchmarks {
-    public class CreateRange {
-        
-        private int[] testData;
+namespace DracTec.FTrees.Benchmarks.ImmutableSeq;
 
-        [Params(
-            // 100,
-            // 1000,
-            // 10000,
-            // 30000
-            Constants.ParamsSize
-        )]
-        public int Count;
+public class CreateRange {
+        
+    private int[] testData;
 
-        [GlobalSetup]
-        public void Setup()
-        {
-            testData = new int[Count];
-            for (int i = 0; i < testData.Length; i++)
-                testData[i] = i;
-        }
+    [Params(
+        // 100,
+        // 1000,
+        // 10000,
+        // 30000
+        Constants.ParamsSize
+    )]
+    public int Count;
+
+    [GlobalSetup]
+    public void Setup()
+    {
+        testData = new int[Count];
+        for (int i = 0; i < testData.Length; i++)
+            testData[i] = i;
+    }
         
-        [Benchmark]
-        public void ListCreateRange()
-        {
-            var list = new List<int>(testData);
-        }
+    [Benchmark]
+    public void ListCreateRange()
+    {
+        var list = new List<int>(testData);
+    }
         
-        [Benchmark]
-        public void ImmutableArrayCreateRange()
-        {
-            var list = ImmutableArray.CreateRange(testData);
-        }
+    [Benchmark]
+    public void ImmutableArrayCreateRange()
+    {
+        var list = ImmutableArray.CreateRange(testData);
+    }
         
-        [Benchmark]
-        public void ImmutableListCreateRange()
-        {
-            var list = ImmutableList.CreateRange(testData);
-        }
+    [Benchmark]
+    public void ImmutableListCreateRange()
+    {
+        var list = ImmutableList.CreateRange(testData);
+    }
         
-        [Benchmark]
-        public void ImmutableSeqCreateRange()
-        {
-            var list = ImmutableSeq.CreateRange(testData);
-        }
+    [Benchmark]
+    public void ImmutableSeqCreateRange()
+    {
+        var list = FTrees.ImmutableSeq.CreateRange(testData);
     }
 }

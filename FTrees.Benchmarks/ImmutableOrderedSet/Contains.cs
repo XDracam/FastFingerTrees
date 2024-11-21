@@ -1,8 +1,9 @@
 ﻿using System.Collections.Immutable;
 using System.Linq;
 using BenchmarkDotNet.Attributes;
+using DracTec.FTrees.Benchmarks.ImmutableSeq;
 
-namespace FTrees.Benchmarks;
+namespace DracTec.FTrees.Benchmarks.ImmutableOrderedSet;
 
 public class Contains
 {
@@ -16,11 +17,8 @@ public class Contains
     public int Count;
 
     private ImmutableOrderedSet<int> testOrderedSet;
-        
     private ImmutableHashSet<int> testHashSet;
-        
     private ImmutableSortedSet<int> testSortedSet;
-
     private ImmutableArray<int> testArray;
     
     [GlobalSetup]
@@ -32,25 +30,25 @@ public class Contains
     }
 
     [Benchmark]
-    public void ImmutableOrderedSetMerge() {
+    public void ImmutableOrderedSetContains() {
         foreach (var i in testArray)
             _ = testOrderedSet.Contains(i);
     }
 
     [Benchmark]
-    public void ImmutableHashSetMerge() {
+    public void ImmutableHashSetContains() {
         foreach (var i in testArray)
             _ = testHashSet.Contains(i);
     }
         
     [Benchmark]
-    public void ImmutableSortedSetMerge() {
+    public void ImmutableSortedSetContains() {
         foreach (var i in testArray)
             _ = testSortedSet.Contains(i);
     }
         
     [Benchmark]
-    public void ImmutableArrayMerge() {
+    public void ImmutableArrayContains() {
         foreach (var i in testArray)
             _ = testArray.Contains(i);
     }
