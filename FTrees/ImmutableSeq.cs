@@ -234,14 +234,14 @@ namespace FTrees
 #endregion
     }
     
-    internal readonly struct Size : Measure<Size>
+    internal readonly struct Size : IMeasure<Size>
     {
         public readonly int Value;
         public Size(int value) => Value = value;
         public Size Add(in Size other) => new(Value + other.Value);
     }
 
-    internal readonly struct SeqElem<T> : Measured<Size>
+    internal readonly struct SeqElem<T> : IMeasured<Size>
     {
         public readonly T Value;
         public SeqElem(T value) => Value = value;
@@ -253,7 +253,7 @@ namespace FTrees
         // like SplitTree, but doesn't generate unnecessary new trees
         // also should check for the first `i > target` and stop
         internal static ref readonly T LookupTree<T>(this FTree<T, Size> tree, ref int target, ref int i) 
-        where T : Measured<Size>
+        where T : IMeasured<Size>
         {
             if (tree is FTree<T, Size>.Single s) return ref s.Value;
             if (tree is FTree<T, Size>.Deep(var pr, var m, var sf)) {

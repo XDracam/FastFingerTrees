@@ -118,7 +118,7 @@ namespace FTrees
             this FTree<T, TKey> tree, 
             ref TKey target, 
             ref TKey i
-        ) where T : Measured<TKey> where TKey : struct, Measure<TKey>, IComparable<TKey> {
+        ) where T : IMeasured<TKey> where TKey : struct, IMeasure<TKey>, IComparable<TKey> {
             if (tree is FTree<T, TKey>.Single s) return ref s.Value;
             if (tree is FTree<T, TKey>.Deep(var pr, var m, var sf)) {
                 var vpr = i.Add(pr.measure<T, TKey>());
@@ -165,7 +165,7 @@ namespace FTrees
         }
     }
 
-    internal readonly struct Key<T> : Measure<Key<T>>, IComparable<Key<T>> where T : IComparable<T> 
+    internal readonly struct Key<T> : IMeasure<Key<T>>, IComparable<Key<T>> where T : IComparable<T> 
     {
         public readonly bool HasValue;
         public readonly T Value;
@@ -190,7 +190,7 @@ namespace FTrees
         public static bool operator>=(Key<T> left, Key<T> right) => left.CompareTo(right) >= 0;
     }
 
-    internal readonly struct OrderedElem<T> : Measured<Key<T>> where T : IComparable<T>
+    internal readonly struct OrderedElem<T> : IMeasured<Key<T>> where T : IComparable<T>
     {
         public readonly T Value;
         public OrderedElem(T value) => Value = value;

@@ -6,6 +6,27 @@ using FastAtomicLazy;
 namespace FTrees
 {
     using static FTree;
+
+    // Value tuples aren't ref structs, so this approach is faster
+    
+    internal readonly ref struct Triple<T>
+    {
+        public readonly ReadOnlySpan<T> Item1;
+        public readonly T Item2;
+        public readonly ReadOnlySpan<T> Item3;
+
+        public Triple(ReadOnlySpan<T> item1, T item2, ReadOnlySpan<T> item3) {
+            Item1 = item1;
+            Item2 = item2;
+            Item3 = item3;
+        }
+
+        public void Deconstruct(out ReadOnlySpan<T> first, out T second, out ReadOnlySpan<T> third) {
+            first = Item1;
+            second = Item2;
+            third = Item3;
+        }
+    };
     
     /// <summary>
     /// A functional representation of persistent sequences supporting access to the ends in amortized constant time,
@@ -14,8 +35,8 @@ namespace FTrees
     /// <remarks> 
     /// Based on https://www.staff.city.ac.uk/~ross/papers/FingerTree.pdf
     /// </remarks>
-    public abstract class FTree<T, V> : IEnumerable<T>, Measured<V>
-    where T : Measured<V> where V : struct, Measure<V>
+    public abstract class FTree<T, V> : IEnumerable<T>, IMeasured<V>
+    where T : IMeasured<V> where V : struct, IMeasure<V>
     {
         private FTree() { }
 
@@ -30,10 +51,9 @@ namespace FTrees
             public override V Measure => default;
         }
         
-        internal sealed class Single : FTree<T, V>
+        internal sealed class Single(T value) : FTree<T, V>
         {
-            public readonly T Value;
-            public Single(T value) => Value = value;
+            public readonly T Value = value;
             public void Deconstruct(out T value) { value = Value; }
             public override V Measure => Value.Measure;
         }
@@ -82,7 +102,7 @@ namespace FTrees
                         sf.ReduceRight(reduceOp, other)
                     )
                 ),
-            _ => throw new NotImplementedException()
+            _ => throw new InvalidOperationException()
         };
         
         public TRes ReduceLeft<TRes>(Func<TRes, T, TRes> reduceOp, TRes other) => this switch {
@@ -96,7 +116,7 @@ namespace FTrees
                         pr.ReduceLeft(reduceOp, other)
                     )
                 ),
-            _ => throw new NotImplementedException()
+            _ => throw new InvalidOperationException()
         };
         
         public FTree<T, V> Prepend(T toAdd, bool isLazy = true) => this switch { // in paper: a <| this
@@ -107,7 +127,7 @@ namespace FTrees
                     ? new Deep(new Digit<T>(toAdd, l[0]), new(() => m.Value.Prepend(new Node<T, V>(l[1], l[2], l[3]), true)), sf)
                     : new Deep(new Digit<T>(toAdd, l[0]), new(m.Value.Prepend(new Node<T, V>(l[1], l[2], l[3]), false)), sf), 
             Deep(var pr, var m, var sf) => new Deep(pr.Prepend(toAdd), m, sf),
-            _ => throw new NotImplementedException()
+            _ => throw new InvalidOperationException()
         };
         
         public FTree<T, V> Append(T toAdd, bool isLazy = true) => this switch { // in paper: this |> a
@@ -118,15 +138,16 @@ namespace FTrees
                     ? new Deep(pr, new(() => m.Value.Append(new Node<T, V>(r[0], r[1], r[2]), true)), new Digit<T>(r[3], toAdd))
                     : new Deep(pr, new(m.Value.Append(new Node<T, V>(r[0], r[1], r[2]), false)), new Digit<T>(r[3], toAdd)), 
             Deep(var pr, var m, var sf) => new Deep(pr, m, sf.Append(toAdd)),
-            _ => throw new NotImplementedException()
+            _ => throw new InvalidOperationException()
         };
 
-        public static FTree<T, V> Create(params T[] values) => CreateRange(values);
+        public static FTree<T, V> Create(params ReadOnlySpan<T> values) => 
+            CreateRange(values);
         
-        public static FTree<T, V> CreateRange(T[] values) =>
+        public static FTree<T, V> CreateRange(ReadOnlySpan<T> values) =>
             createRangeOptimized(values);
         
-        private static FTree<T, V> createRangeOptimized(T[] array) {
+        private static FTree<T, V> createRangeOptimized(ReadOnlySpan<T> array) {
             var length = array.Length;
             switch (length) {
                 case 0:
@@ -136,31 +157,25 @@ namespace FTrees
                 case <= 8:
                     // Create a digit directly if possible
                     var firstDigitLength = length / 2;
-                    var secondDigitLength = length - firstDigitLength;
                     return new Deep(
-                        new Digit<T>(subRangeOf(array, 0, firstDigitLength)), 
+                        new Digit<T>(array[..firstDigitLength]), 
                         new LazyThunk<FTree<Node<T, V>, V>>(() => FTree<Node<T, V>, V>.EmptyT.Instance), 
-                        new Digit<T>(subRangeOf(array, 0 + firstDigitLength, secondDigitLength))
+                        new Digit<T>(array[firstDigitLength..])
                     );
                 default:
-                    var leftDigit = new Digit<T>(subRangeOf(array, 0, 3));
-                    var rightDigit = new Digit<T>(subRangeOf(array, length - 3, 3));
-                    
+                    var leftDigit = new Digit<T>(array[..3]);
+                    var rightDigit = new Digit<T>(array[^3..]);
+
+                    var arrForNodes = array[3..^3].ToArray();
                     // Note: node needs 2 or 3 elements
                     return new Deep(
                         leftDigit, 
-                        new(() => {
-                            var nodeArr = nodes(array, 0 + 3, length - 6);
+                        new LazyThunk<FTree<Node<T, V>, V>>(() => {
+                            var nodeArr = nodes<T>(arrForNodes);
                             return FTree<Node<T, V>, V>.createRangeOptimized(nodeArr);
                         }),
                         rightDigit
                     );
-            }
-            
-            static T[] subRangeOf(T[] input, int start, int length) {
-                var result = new T[length];
-                Array.Copy(input, start, result, 0, length);
-                return result;
             }
         }
 
@@ -189,7 +204,7 @@ namespace FTrees
             // PREPEND <|' -> reduceR
             // APPEND |>' -> reduceL
 
-            static FTree<A, V> app3<A>(FTree<A, V> self, Digit<A> ts, FTree<A, V> other) where A : Measured<V> => 
+            static FTree<A, V> app3<A>(FTree<A, V> self, Digit<A> ts, FTree<A, V> other) where A : IMeasured<V> => 
                 (self, other) switch {
                     // TODO: faster if switched on number of elements in digit
                     (FTree<A, V>.EmptyT, var xs) => ts.ReduceRight((c, acc) => acc.Prepend(c), xs),
@@ -202,48 +217,42 @@ namespace FTrees
                             new(() => app3(
                                 m1.Value,
                                 new Digit<Node<A, V>>(
-                                    nodes(concat(sf1.Values, ts.Values, pr2.Values, out var length), 0, length)
+                                    nodes<A>(concat(sf1.Values, ts.Values, pr2.Values))
                                 ), 
                                 m2.Value
                             )),
                             sf2
                         ),
-                    _ => throw new NotImplementedException()
+                    _ => throw new InvalidOperationException()
                 };
 
-            static A[] concat<A>(A[] first, A[] second, A[] third, out int length) {
+            static A[] concat<A>(A[] first, A[] second, A[] third) {
                 var res = new A[first.Length + second.Length + third.Length];
                 Array.Copy(first, 0, res, 0, first.Length);
                 Array.Copy(second, 0, res, first.Length, second.Length);
                 Array.Copy(third, 0, res, first.Length + second.Length, third.Length);
-                length = res.Length;
                 return res;
             }
         }
         
         // optimized to avoid unnecessary allocations
-        private static Node<A, V>[] nodes<A>(A[] arr, int start, int length) where A : Measured<V> {
+        private static Node<A, V>[] nodes<A>(ReadOnlySpan<A> arr) where A : IMeasured<V> {
+            var length = arr.Length;
             var mod = length % 3;
             var res = new Node<A, V>[(length / 3) + (mod > 0 ? 1 : 0)];
 
             // 0 -> no node2s, 2 -> 1 node2, 1 -> 2 node2s (all nodes need 2 or 3 items)
             var numNode2 = (mod * 2) % 3; 
-            var node3EndIdx = start + length - numNode2 * 2;
+            var node3EndIdx = length - numNode2 * 2;
                     
-            var arrIdx = start;
+            var arrIdx = 0;
             var resIdx = 0;
                     
-            while (arrIdx < node3EndIdx) {
-                res[resIdx] = new Node<A, V>(arr[arrIdx], arr[arrIdx + 1], arr[arrIdx + 2]);
-                resIdx += 1;
-                arrIdx += 3;
-            }
+            while (arrIdx < node3EndIdx)
+                res[resIdx++] = new Node<A, V>(arr[arrIdx++], arr[arrIdx++], arr[arrIdx++]);
                 
-            for (var i = 0; i < numNode2; ++i) {
-                res[resIdx] = new Node<A, V>(arr[arrIdx], arr[arrIdx + 1]);
-                resIdx += 1;
-                arrIdx += 2;
-            }
+            for (var i = 0; i < numNode2; ++i)
+                res[resIdx++] = new Node<A, V>(arr[arrIdx++], arr[arrIdx++]);
                 
             return res;
         }
@@ -271,24 +280,20 @@ namespace FTrees
             throw new InvalidOperationException();
             
             // digits have at most 4 items, so O(1)
-            static (A[], A, A[]) splitDigit<A>(Func<V, bool> p, V i, Digit<A> digit) where A : Measured<V> {
+            static Triple<A> splitDigit<A>(Func<V, bool> p, V i, Digit<A> digit) where A : IMeasured<V> {
                 if (digit.Values.Length == 1)
-                    return new(Array.Empty<A>(), digit.Head, Array.Empty<A>());
+                    return new([], digit.Head, []);
                 for (var idx = 0; idx < digit.Values.Length; ++idx) {
                     i = i.Add(digit.Values[idx].Measure);
                     if (p(i)) return split(digit.Values, idx);
                 }
                 // not found anything, take last element
-                return (digit.Init.Values, digit.Last, Array.Empty<A>());
+                return new(digit.Init.Values, digit.Last, []);
 
-                static (A[], A, A[]) split(A[] array, int idx) {
-                    var firstSize = idx;
-                    var secondSize = array.Length - idx - 1;
-                    var first = new A[firstSize];
-                    Array.Copy(array, 0, first, 0, firstSize);
-                    var second = new A[secondSize];
-                    Array.Copy(array, firstSize + 1, second, 0, secondSize);
-                    return (first, array[idx], second);
+                static Triple<A> split(A[] array, int idx) {
+                    var first = array.AsSpan()[..idx];
+                    var second = array.AsSpan()[(idx+1)..];
+                    return new(first, array[idx], second);
                 }
             }
         }
@@ -330,7 +335,7 @@ namespace FTrees
                 var it = m.Value.GetReverseEnumerator();
                 while (it.MoveNext()) {
                     var node = it.Current;
-                    if (node.HasThird) yield return node.Third;
+                    if (node!.HasThird) yield return node.Third;
                     yield return node.Second;
                     yield return node.First;
                 }
@@ -342,20 +347,20 @@ namespace FTrees
     
     public static class FTree
     {
-        internal static View<A, V> toViewL<A, V>(FTree<A, V> self) where A : Measured<V> where V : struct, Measure<V> {
+        internal static View<A, V> toViewL<A, V>(FTree<A, V> self) where A : IMeasured<V> where V : struct, IMeasure<V> {
             return self switch {
                 FTree<A, V>.EmptyT => new View<A, V>(),
                 FTree<A, V>.Single(var x) => new View<A, V>(x, new(FTree<A, V>.EmptyT.Instance)),
                 FTree<A, V>.Deep(var pr, var m, var sf) => new View<A, V>(pr.Head, new(() => deepL(pr.Tail.Values, m, sf))),
-                _ => throw new NotImplementedException()
+                _ => throw new InvalidOperationException()
             };
         }
         
         internal static FTree<A, V> deepL<A, V>(
-            A[] pr, 
+            ReadOnlySpan<A> pr, 
             LazyThunk<FTree<Node<A, V>, V>> m, 
             Digit<A> sf
-        ) where A : Measured<V> where V : struct, Measure<V> {
+        ) where A : IMeasured<V> where V : struct, IMeasure<V> {
             if (pr.Length > 0) 
                 return new FTree<A, V>.Deep(new(pr), m, sf);
             
@@ -366,25 +371,25 @@ namespace FTrees
                     new FTree<A, V>.Deep(x.ToDigit(), new(FTree<Node<A, V>, V>.Empty), sf),
                 FTree<Node<A, V>, V>.Deep(var pr2, var m2, var sf2) => 
                     new FTree<A, V>.Deep(pr2.Head.ToDigit(), new(() => deepL(pr2.Tail.Values, m2, sf2)), sf),
-                _ => throw new NotImplementedException()
+                _ => throw new InvalidOperationException()
             };
         }
         
         
-        internal static View<A, V> toViewR<A, V>(FTree<A, V> self) where A : Measured<V> where V : struct, Measure<V> {
+        internal static View<A, V> toViewR<A, V>(FTree<A, V> self) where A : IMeasured<V> where V : struct, IMeasure<V> {
             return self switch {
                 FTree<A, V>.EmptyT => new View<A, V>(),
                 FTree<A, V>.Single(var x) => new View<A, V>(x, new(FTree<A, V>.EmptyT.Instance)),
                 FTree<A, V>.Deep(var pr, var m, var sf) => new View<A, V>(sf.Last, new(() => deepR(pr, m, sf.Init.Values))),
-                _ => throw new NotImplementedException()
+                _ => throw new InvalidOperationException()
             };
         }
         
         internal static FTree<A, V> deepR<A, V>(
             Digit<A> pr,
             LazyThunk<FTree<Node<A, V>, V>> m, 
-            A[] sf
-        ) where A : Measured<V> where V : struct, Measure<V> {
+            ReadOnlySpan<A> sf
+        ) where A : IMeasured<V> where V : struct, IMeasure<V> {
             if (sf.Length > 0) 
                 return new FTree<A, V>.Deep(pr, m, new(sf));
             
@@ -395,7 +400,7 @@ namespace FTrees
                     new FTree<A, V>.Deep(pr, new(FTree<Node<A, V>, V>.Empty), x.ToDigit()),
                 FTree<Node<A, V>, V>.Deep(var pr2, var m2, var sf2) => 
                     new FTree<A, V>.Deep(pr, new(() => deepR(pr2, m2, sf2.Init.Values)), sf2.Last.ToDigit()),
-                _ => throw new NotImplementedException()
+                _ => throw new InvalidOperationException()
             };
         }
     }
@@ -403,12 +408,12 @@ namespace FTrees
     internal readonly struct Digit<T>
     {
         public readonly T[] Values; // between 1 and 4 values
-        public Digit(T[] values) => Values = values;
+        public Digit(ReadOnlySpan<T> values) { Values = values.ToArray(); }
 
-        public Digit(T a) => Values = new[]{a};
-        public Digit(T a, T b) => Values = new[]{a, b};
-        public Digit(T a, T b, T c) => Values = new[]{a, b, c}; 
-        public Digit(T a, T b, T c, T d) => Values = new[]{a, b, c, d}; // "dangerous"
+        public Digit(T a) => Values = [a];
+        public Digit(T a, T b) => Values = [a, b];
+        public Digit(T a, T b, T c) => Values = [a, b, c]; 
+        public Digit(T a, T b, T c, T d) => Values = [a, b, c, d]; // "dangerous"
 
         public TRes ReduceRight<TRes>(Func<T, TRes, TRes> reduceOp, TRes other) {
             var acc = other;
@@ -447,7 +452,7 @@ namespace FTrees
             _ => throw new InvalidOperationException()
         };
         
-        public T Last => Values[Values.Length - 1];
+        public T Last => Values[^1];
         public Digit<T> Init => Values.Length switch {
             1 => new(Array.Empty<T>()),
             2 => new(Values[0]),
@@ -458,20 +463,20 @@ namespace FTrees
     }
 
     public static class MeasureExtensions {
-        internal static V measure<T, V>(this Digit<T> digit) where T : Measured<V> where V : struct, Measure<V> =>
+        internal static V measure<T, V>(this Digit<T> digit) where T : IMeasured<V> where V : struct, IMeasure<V> =>
             digit.Values.Length switch { // somehow faster than a loop
                 1 => digit.Values[0].Measure,
                 2 => digit.Values[0].Measure.Add(digit.Values[1].Measure),
                 3 => digit.Values[0].Measure.Add(digit.Values[1].Measure).Add(digit.Values[2].Measure),
                 4 => digit.Values[0].Measure.Add(digit.Values[1].Measure).Add(digit.Values[2].Measure).Add(digit.Values[3].Measure),
-                _ => throw new NotImplementedException()
+                _ => throw new InvalidOperationException()
             };
     }
 
-    public interface Measure<TSelf> where TSelf : struct { TSelf Add(in TSelf other); }
-    public interface Measured<V> where V : struct, Measure<V> { V Measure { get; } }
+    public interface IMeasure<TSelf> where TSelf : struct { TSelf Add(in TSelf other); }
+    public interface IMeasured<V> where V : struct, IMeasure<V> { V Measure { get; } }
     
-    internal sealed class Node<T, V> : Measured<V> where T : Measured<V> where V : struct, Measure<V>
+    internal sealed class Node<T, V> : IMeasured<V> where T : IMeasured<V> where V : struct, IMeasure<V>
     {
         public readonly bool HasThird;
         public readonly T First, Second, Third;
@@ -517,7 +522,7 @@ namespace FTrees
         public Digit<T> ToDigit() => HasThird ? new Digit<T>(First, Second, Third) : new Digit<T>(First, Second);
     }
 
-    internal readonly struct View<T, V> where T : Measured<V> where V : struct, Measure<V>
+    internal readonly struct View<T, V> where T : IMeasured<V> where V : struct, IMeasure<V>
     {
         public readonly bool IsCons;
         public readonly T Head;

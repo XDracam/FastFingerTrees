@@ -72,18 +72,18 @@ namespace FTrees
         }
     }
     
-    public readonly struct Interval<T, P> : Measured<KeyPrio<P>> where P : IComparable<P>
+    public readonly struct Interval<T, P> : IMeasured<KeyPrio<P>> where P : IComparable<P>
     {
         public readonly T Value;
         public readonly P Low, High; // inclusive
         public Interval(T value, P low, P high) => 
             (Value, Low, High) = (value, low, high);
 
-        KeyPrio<P> Measured<KeyPrio<P>>.Measure => measure;
+        KeyPrio<P> IMeasured<KeyPrio<P>>.Measure => measure;
         internal KeyPrio<P> measure => new(new Key<P>(Low), new Prio<P>(High));
     }
 
-    internal readonly struct KeyPrio<P> : Measure<KeyPrio<P>> where P : IComparable<P>
+    internal readonly struct KeyPrio<P> : IMeasure<KeyPrio<P>> where P : IComparable<P>
     {
         public readonly Key<P> Key;
         public readonly Prio<P> Prio;

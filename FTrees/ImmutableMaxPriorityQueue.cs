@@ -50,7 +50,7 @@ namespace FTrees
         // 2. Could implement "all elements >= k" in theta(m log(n/m)) time
     }
     
-    internal readonly struct Prio<P> : Measure<Prio<P>>, IComparable<Prio<P>> where P : IComparable<P> 
+    internal readonly struct Prio<P> : IMeasure<Prio<P>>, IComparable<Prio<P>> where P : IComparable<P> 
     {
         public readonly bool HasValue;
         public readonly P Value; // none is "negative infinity"
@@ -78,7 +78,7 @@ namespace FTrees
         public static bool operator>=(Prio<P> left, Prio<P> right) => left.CompareTo(right) >= 0;
     }
 
-    internal readonly struct PrioElem<T, P> : Measured<Prio<P>> where P : IComparable<P>
+    internal readonly struct PrioElem<T, P> : IMeasured<Prio<P>> where P : IComparable<P>
     {
         public readonly T Value;
         public readonly P Priority;
