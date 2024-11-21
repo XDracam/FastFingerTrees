@@ -86,8 +86,7 @@ namespace FTrees
                 return l.Concat(merge(view.Tail, r.Prepend(x)).Prepend(view.Head));
             }
         }
-
-        // TODO: benchmark this
+        
         public bool Contains(T value) {
             var newKey = new Key<T>(value);
             var i = new Key<T>();
