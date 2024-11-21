@@ -1,13 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.CompilerServices;
 
 namespace FTrees
 {
     public static class ImmutableMaxPriorityQueue
     {
-        public static ImmutableMaxPriorityQueue<T, P> Create<T, P>(params (T, P)[] values) where P : IComparable<P> => 
-            CreateRange(values);
+        public static ImmutableMaxPriorityQueue<T, P> Create<T, P>(params ReadOnlySpan<(T, P)> values) where P : IComparable<P> => 
+            CreateRange(values.ToArray());
         
         public static ImmutableMaxPriorityQueue<T, P> CreateRange<T, P>(IEnumerable<(T, P)> values) where P : IComparable<P> =>
             new(FTree<PrioElem<T, P>, Prio<P>>.CreateRange(values.Select(v => new PrioElem<T, P>(v.Item1, v.Item2)).ToArray()));
@@ -22,6 +23,7 @@ namespace FTrees
     /// There is currently no way of removing an element efficiently.
     /// It can be implemented, but only by also providing the elements' exact previous priority.
     /// </remarks>
+    [CollectionBuilder(typeof(ImmutableMaxPriorityQueue), nameof(ImmutableMaxPriorityQueue.Create))]
     public readonly struct ImmutableMaxPriorityQueue<T, P> where P : IComparable<P>
     {
         // Note: no support for equality comparer: how would we even cache those? in all priorities? therefore all elements?

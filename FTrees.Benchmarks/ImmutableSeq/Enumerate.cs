@@ -31,23 +31,23 @@ namespace FTrees.Benchmarks {
 
         }
         
-        // [Benchmark]
-        // public void ListEnumerate()
-        // {
-        //     foreach (var item in list) { }
-        // }
-        //
-        // [Benchmark]
-        // public void ImmutableArrayEnumerate()
-        // {
-        //     foreach (var item in immutableArray) { }
-        // }
-        //
-        // [Benchmark]
-        // public void ImmutableListEnumerate()
-        // {
-        //     foreach (var item in immutableList) { }
-        // }
+        [Benchmark]
+        public void ListEnumerate()
+        {
+            foreach (var item in list) { }
+        }
+        
+        [Benchmark]
+        public void ImmutableArrayEnumerate()
+        {
+            foreach (var item in immutableArray) { }
+        }
+        
+        [Benchmark]
+        public void ImmutableListEnumerate()
+        {
+            foreach (var item in immutableList) { }
+        }
         
         [Benchmark]
         public void ImmutableSeqEnumerate()

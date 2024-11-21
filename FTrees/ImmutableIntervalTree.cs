@@ -1,14 +1,19 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Runtime.CompilerServices;
 
 namespace FTrees
 {
     public static class ImmutableIntervalTree
     {
         public static ImmutableIntervalTree<T, P> Create<T, P>(
-            params Interval<T, P>[] values
-        ) where P : IComparable<P> => CreateRange(values);
+            params ReadOnlySpan<Interval<T, P>> values
+        ) where P : IComparable<P> {
+            var res = ImmutableIntervalTree<T, P>.Empty;
+            foreach (var item in values) res = res.Insert(item);
+            return res;
+        }
 
         public static ImmutableIntervalTree<T, P> CreateRange<T, P>(
             IEnumerable<Interval<T, P>> values
@@ -25,6 +30,7 @@ namespace FTrees
     /// Allows managing of objects with intervals. Overlapping intervals can be queried efficiently.
     /// Also allows efficient merging of two interval trees.
     /// </summary>
+    [CollectionBuilder(typeof(ImmutableIntervalTree), nameof(ImmutableIntervalTree.Create))]
     public readonly struct ImmutableIntervalTree<T, P> where P : IComparable<P>
     {
         private readonly FTree<Interval<T, P>, KeyPrio<P>> backing;

@@ -29,31 +29,31 @@ namespace FTrees.Benchmarks {
             immutableSeq = ImmutableSeq.CreateRange(range);
         }
         
-        // [Benchmark]
-        // public void ListIndex() {
-        //     for (var i = 0; i < Count; ++i) {
-        //         _ = list[i];
-        //         _ = list[Count - i - 1];
-        //     }
-        // }
-        //
-        // [Benchmark]
-        // public void ImmutableArrayIndex()
-        // {
-        //     for (var i = 0; i < Count; ++i) {
-        //         _ = immutableArray[i];
-        //         _ = immutableArray[Count - i - 1];
-        //     }
-        // }
-        //
-        // [Benchmark]
-        // public void ImmutableListIndex()
-        // {
-        //     for (var i = 0; i < Count; ++i) {
-        //         _ = immutableList[i];
-        //         _ = immutableList[Count - i - 1];
-        //     }
-        // }
+        [Benchmark]
+        public void ListIndex() {
+            for (var i = 0; i < Count; ++i) {
+                _ = list[i];
+                _ = list[Count - i - 1];
+            }
+        }
+        
+        [Benchmark]
+        public void ImmutableArrayIndex()
+        {
+            for (var i = 0; i < Count; ++i) {
+                _ = immutableArray[i];
+                _ = immutableArray[Count - i - 1];
+            }
+        }
+        
+        [Benchmark]
+        public void ImmutableListIndex()
+        {
+            for (var i = 0; i < Count; ++i) {
+                _ = immutableList[i];
+                _ = immutableList[Count - i - 1];
+            }
+        }
         
         [Benchmark]
         public void ImmutableSeqIndex()

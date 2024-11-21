@@ -2,6 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Runtime.CompilerServices;
 
 namespace FTrees
 {
@@ -29,6 +30,7 @@ namespace FTrees
     /// <remarks>
     /// An object may be present multiple times. Calling <see cref="Remove"/> will remove all instances.
     /// </remarks>
+    [CollectionBuilder(typeof(ImmutableOrderedSet), nameof(ImmutableOrderedSet.Create))]
     public readonly struct ImmutableOrderedSet<T> : IEnumerable<T> where T : IComparable<T>
     {
         // Note: no support for IComparer: how would we even cache those? in all keys? therefore all elements?

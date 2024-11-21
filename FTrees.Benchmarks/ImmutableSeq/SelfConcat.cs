@@ -31,20 +31,20 @@ namespace FTrees.Benchmarks {
         
         }
         
-        // [Benchmark]
-        // public void ListConcat() {
-        //     _ = list.Concat(list).ToList(); // "immutable concat"
-        // }
-        //
-        // [Benchmark]
-        // public void ImmutableArrayConcat() {
-        //     _ = immutableArray.AddRange(immutableArray);
-        // }
-        //
-        // [Benchmark]
-        // public void ImmutableListConcat() {
-        //     _ = immutableList.AddRange(immutableList);
-        // }
+        [Benchmark]
+        public void ListConcat() {
+            _ = list.Concat(list).ToList(); // "immutable concat"
+        }
+        
+        [Benchmark]
+        public void ImmutableArrayConcat() {
+            _ = immutableArray.AddRange(immutableArray);
+        }
+        
+        [Benchmark]
+        public void ImmutableListConcat() {
+            _ = immutableList.AddRange(immutableList);
+        }
         
         [Benchmark]
         public void ImmutableSeqConcat()

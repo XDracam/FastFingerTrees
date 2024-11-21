@@ -24,23 +24,23 @@ namespace FTrees.Benchmarks {
                 testData[i] = i;
         }
         
-        // [Benchmark]
-        // public void ListCreateRange()
-        // {
-        //     var list = new List<int>(testData);
-        // }
-        //
-        // [Benchmark]
-        // public void ImmutableArrayCreateRange()
-        // {
-        //     var list = ImmutableArray.CreateRange(testData);
-        // }
-        //
-        // [Benchmark]
-        // public void ImmutableListCreateRange()
-        // {
-        //     var list = ImmutableList.CreateRange(testData);
-        // }
+        [Benchmark]
+        public void ListCreateRange()
+        {
+            var list = new List<int>(testData);
+        }
+        
+        [Benchmark]
+        public void ImmutableArrayCreateRange()
+        {
+            var list = ImmutableArray.CreateRange(testData);
+        }
+        
+        [Benchmark]
+        public void ImmutableListCreateRange()
+        {
+            var list = ImmutableList.CreateRange(testData);
+        }
         
         [Benchmark]
         public void ImmutableSeqCreateRange()

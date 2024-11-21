@@ -3,12 +3,13 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
+using System.Runtime.CompilerServices;
 
 namespace FTrees
 {
     public static class ImmutableSeq
     {
-        public static ImmutableSeq<T> Create<T>(params T[] values) => CreateRange(values);
+        public static ImmutableSeq<T> Create<T>(params ReadOnlySpan<T> values) => CreateRange(values.ToArray());
         
         public static ImmutableSeq<T> CreateRange<T>(IEnumerable<T> values) =>
             new(FTree<SeqElem<T>, Size>.CreateRange(values.Select(v => new SeqElem<T>(v)).ToArray()));
@@ -21,6 +22,7 @@ namespace FTrees
     /// Inserting <see cref="IEnumerable{T}"/> will have no overhead if the enumerable is already an <c>ImmutableSeq{T}</c>.
     /// Otherwise a seq will need to be built, which takes O(|items|) amortized time.
     /// </summary>
+    [CollectionBuilder(typeof(ImmutableSeq), nameof(ImmutableSeq.Create))]
     public readonly struct ImmutableSeq<T> : IImmutableList<T>
     {
         private readonly FTree<SeqElem<T>, Size> backing;
