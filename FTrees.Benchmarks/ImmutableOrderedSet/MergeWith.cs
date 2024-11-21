@@ -6,10 +6,10 @@ namespace FTrees.Benchmarks {
     public class MergeWith {
         
         [Params(
-            100,
-            1000,
-            10000,
-            30000
+            // 100,
+            // 1000,
+            10000//,
+            // 30000
         )]
         public int Count;
 

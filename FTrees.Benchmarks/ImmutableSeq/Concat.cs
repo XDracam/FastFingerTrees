@@ -14,8 +14,8 @@ namespace FTrees.Benchmarks {
         [Params(
             // 100,
             // 1000,
-            // 10000,
-            30000
+            10000//,
+            // 30000
         )]
         public int Count;
 
