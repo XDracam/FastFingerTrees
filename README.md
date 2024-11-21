@@ -3,10 +3,10 @@
 A brutally micro-optimized implementation of 2-3 finger trees as introduced in [this paper](https://www.staff.city.ac.uk/~ross/papers/FingerTree.pdf) (DOI `10.1017/S0956796805005769`).
 This implementation is competitve with other immutable collections from the `System.Collections.Immutable` namespace, even massively exceeding their performance in some scenarios.
 
-> [!NOTE]
+> [!IMPORTANT]
 > This is a hobby project of mine. I want to see how far I can push this.
 > As a consequence, unit tests are AI generated and the benchmarks are written for convenience over professionality.
-> There is no reason why I am doing this and I have no plans to ever use this in production.
+> There is no practical reason for why I am doing this and I have no plans to ever use this in production.
 > Do not take this project too seriously (yet!)
 
 Finger trees are an abstract "backing collection" that can be used as a base to implement a diverse set of more specific collections. 
