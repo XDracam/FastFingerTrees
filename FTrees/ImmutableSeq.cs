@@ -257,7 +257,7 @@ namespace FTrees
         {
             if (tree is FTree<T, Size>.Single s) return ref s.Value;
             if (tree is FTree<T, Size>.Deep(var pr, var m, var sf)) {
-                var vpr = i + pr.measure<T, Size>().Value;
+                var vpr = i + pr.Measure.Value;
                 if (vpr > target) 
                     return ref lookupDigit(ref target, ref i, pr.Values);
 

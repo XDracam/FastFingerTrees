@@ -7,8 +7,12 @@ namespace FTrees
 {
     public static class ImmutableOrderedSet
     {
-        public static ImmutableOrderedSet<T> Create<T>(params T[] values) where T : IComparable<T> => CreateRange(values);
-
+        public static ImmutableOrderedSet<T> Create<T>(params ReadOnlySpan<T> values) where T : IComparable<T> {
+            var res = ImmutableOrderedSet<T>.Empty;
+            foreach (var item in values) res = res.Add(item);
+            return res;
+        }
+        
         public static ImmutableOrderedSet<T> CreateRange<T>(IEnumerable<T> values) where T : IComparable<T> {
             var res = ImmutableOrderedSet<T>.Empty;
             foreach (var item in values) res = res.Add(item);
@@ -59,6 +63,7 @@ namespace FTrees
             return new(l.Concat(r2));
         }
 
+        // TODO: can this be optimized?
         /// Amortized theta(m log (n/m)) time (asymptotically optimal)
         public ImmutableOrderedSet<T> MergeWith(ImmutableOrderedSet<T> other) {
             return new(merge(backing, other.backing));
@@ -80,6 +85,7 @@ namespace FTrees
             }
         }
 
+        // TODO: benchmark this
         public bool Contains(T value) {
             var newKey = new Key<T>(value);
             var i = new Key<T>();
@@ -121,7 +127,7 @@ namespace FTrees
         ) where T : IMeasured<TKey> where TKey : struct, IMeasure<TKey>, IComparable<TKey> {
             if (tree is FTree<T, TKey>.Single s) return ref s.Value;
             if (tree is FTree<T, TKey>.Deep(var pr, var m, var sf)) {
-                var vpr = i.Add(pr.measure<T, TKey>());
+                var vpr = i.Add(pr.Measure);
                 if (vpr.CompareTo(target) <= 0) {
                     return ref lookupDigit(ref target, ref i, pr.Values);
                 }
