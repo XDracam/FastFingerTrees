@@ -281,17 +281,18 @@ internal static class ImmutableSeqUtils
     // guaranteed to be O(logn)
     // like SplitTree, but doesn't generate unnecessary new trees
     // also should check for the first `i > target` and stop
-    internal static ref readonly T LookupTree<T>(this FTree<T, Size> tree, int target) where T : IFTreeElement<Size> {
-        // The C# lifetime analyzer cannot prove that a local variable will not be included in the returned T somehow.
-        // As a consequence, it cannot allow stack memory to leak => we need to heap allocate this.
-        var cell = new[]{0}; 
-        return ref lookupTree(tree, target, ref cell[0]);
-    }
+    internal static ref readonly T LookupTree<T>(this FTree<T, Size> tree, int target) where T : IFTreeElement<Size> =>
+        ref lookupTree(tree, target, 0, out _);
     
-    // i is maintained as a memory slot and updated in the recursion
-    private static ref readonly T lookupTree<T>(this FTree<T, Size> tree, int target, ref int i) 
+    // `initial` is the number of elements to the left of the current tree.
+    // `i` is used as a tracker of the number of elements visited when the method returns.
+    // This memory slot on the stack is shared across all recursive lookups.
+    // Without this weird workaround, we wouldn't be able to ref return the result,
+    //  which could hurt performance if T was a value type larger than a pointer.
+    private static ref readonly T lookupTree<T>(this FTree<T, Size> tree, int target, int initial, out int i) 
         where T : IFTreeElement<Size>
     {
+        i = initial;
         if (tree is FTree<T, Size>.Single s) 
             return ref s.Value;
             
@@ -304,7 +305,7 @@ internal static class ImmutableSeqUtils
             var mValue = m.Value;
             var vm = vpr + mValue.Measure.Value;
             if (vm > target) {
-                var xs = lookupTree(mValue, target, ref i);
+                var xs = lookupTree(mValue, target, i, out i);
                 return ref lookupNode(target, i, xs);
             }
 
