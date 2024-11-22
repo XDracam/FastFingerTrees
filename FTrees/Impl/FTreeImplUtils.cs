@@ -109,8 +109,8 @@ internal static class FTreeImplUtils
             var span = res.AsSpan();
             
             first.CopyTo(span[..al]);
-            second.CopyTo(span[al..bl]);
-            third.CopyTo(span[bl..]);
+            second.CopyTo(span[al..abl]);
+            third.CopyTo(span[abl..]);
             
             return res;
         }

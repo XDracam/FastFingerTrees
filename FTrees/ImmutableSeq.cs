@@ -44,18 +44,20 @@ public readonly struct ImmutableSeq<T> : IImmutableList<T>
     }
         
     /// O(log n)
-    public T this[int idx] {
+    public ref readonly T this[int idx] {
         get {
             if (idx < 0) throw new IndexOutOfRangeException();
             if (idx >= Count) throw new IndexOutOfRangeException();
-            if (idx == 0) return Head;
-            if (idx == Count - 1) return Last;
+            if (idx == 0) return ref Head;
+            if (idx == Count - 1) return ref Last;
                 
-            return backing.LookupTree(idx, 0).Value;
+            return ref backing.LookupTree(idx, 0).Value;
         }
     }
+    
+   T IReadOnlyList<T>.this[int idx] => this[idx]; // copy, not ref :c
 
-    public T this[Index index] => this[index.GetOffset(Count)];
+   public ref readonly T this[Index index] => ref this[index.GetOffset(Count)];
 
     public ImmutableSeq<T> this[Range range] {
         get {
@@ -77,10 +79,10 @@ public readonly struct ImmutableSeq<T> : IImmutableList<T>
     public ImmutableSeq<T> Append(T element) => new(backing.Append(new(element)));
 
     /// O(1)
-    public T Head => backing.Head.Value;
+    public ref readonly T Head => ref backing.Head.Value;
 
     /// O(1)
-    public T Last => backing.Last.Value;
+    public ref readonly T Last => ref backing.Last.Value;
         
     /// Amortized O(1)
     public ImmutableSeq<T> Tail => new(backing.Tail);

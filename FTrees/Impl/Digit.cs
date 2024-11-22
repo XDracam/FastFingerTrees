@@ -43,9 +43,9 @@ internal readonly struct Digit<T, V> where T : IFTreeElement<V> where V : struct
         _ => throw new InvalidOperationException()
     };
 
-    public T Head => Values[0];
+    public ref readonly T Head => ref Values.AsSpan()[0];
     public ReadOnlySpan<T> Tail => Values.AsSpan()[1..];
     
-    public T Last => Values[^1];
+    public ref readonly T Last => ref Values.AsSpan()[^1];
     public ReadOnlySpan<T> Init => Values.AsSpan()[..^1];
 }

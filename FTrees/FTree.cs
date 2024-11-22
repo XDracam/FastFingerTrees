@@ -47,9 +47,9 @@ where T : IFTreeElement<V> where V : struct, IFTreeMeasure<V>
 
     internal sealed class Deep : FTree<T, V>
     {
-        private LazyThunkClass<V> measure; // must be mutable for proper caching
+        private readonly LazyThunkClass<V> measure;
         public readonly Digit<T, V> Left;
-        private LazyThunkClass<FTree<Node<T, V>, V>> spine;  // must be mutable for proper caching
+        private readonly LazyThunkClass<FTree<Node<T, V>, V>> spine;
         public readonly Digit<T, V> Right;
 
         public FTree<Node<T, V>, V> Spine => spine.Value;
@@ -163,19 +163,23 @@ where T : IFTreeElement<V> where V : struct, IFTreeMeasure<V>
 
     public bool IsEmpty => this is EmptyT;
     
-    public T Head => this switch {
-        Single(var x) => x,
-        Deep(var pr, _, _) => pr.Head,
-        _ => throw new InvalidOperationException()
-    };
+    public ref readonly T Head {
+        get {
+            if (this is Single s) return ref s.Value;
+            if (this is Deep d) return ref d.Left.Head;
+            throw new InvalidOperationException();
+        }
+    }
 
     public FTree<T, V> Tail => toViewL(this).Tail;
     
-    public T Last => this switch {
-        Single(var x) => x,
-        Deep(_, _, var sf) => sf.Last,
-        _ => throw new InvalidOperationException()
-    };
+    public ref readonly T Last {
+        get {
+            if (this is Single s) return ref s.Value;
+            if (this is Deep d) return ref d.Right.Last;
+            throw new InvalidOperationException();
+        }
+    }
     
     public FTree<T, V> Init => toViewR(this).Tail;
 
