@@ -52,7 +52,7 @@ public readonly struct ImmutableMaxPriorityQueue<T, P> where P : IComparable<P>
     // 2. Could implement "all elements >= k" in theta(m log(n/m)) time
 }
     
-internal readonly struct Prio<P>(P value) : IMeasure<Prio<P>>, IComparable<Prio<P>>
+internal readonly struct Prio<P>(P value) : IFTreeMeasure<Prio<P>>, IComparable<Prio<P>>
     where P : IComparable<P>
 {
     public readonly bool HasValue = true; // still false when `default`ed
@@ -95,7 +95,7 @@ internal readonly struct Prio<P>(P value) : IMeasure<Prio<P>>, IComparable<Prio<
         return result;
     }
 
-    public static Prio<P> Add<T>(ReadOnlySpan<T> values) where T : IMeasured<Prio<P>> {
+    public static Prio<P> Add<T>(ReadOnlySpan<T> values) where T : IFTreeElement<Prio<P>> {
         Prio<P> result = default;
         var i = 0;
         // step 1: find first result that has value
@@ -116,7 +116,7 @@ internal readonly struct Prio<P>(P value) : IMeasure<Prio<P>>, IComparable<Prio<
     }
 }
 
-internal readonly struct PrioElem<T, P> : IMeasured<Prio<P>> where P : IComparable<P>
+internal readonly struct PrioElem<T, P> : IFTreeElement<Prio<P>> where P : IComparable<P>
 {
     public readonly T Value;
     public readonly P Priority;

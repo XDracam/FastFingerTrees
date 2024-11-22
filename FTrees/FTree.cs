@@ -1,11 +1,19 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using DracTec.FTrees.Impl;
 
 namespace DracTec.FTrees;
 
-using static FTree;
-using static FTreeUtils;
+using static FTreeImplUtils;
+
+public interface IFTreeMeasure<TSelf> where TSelf : struct, IFTreeMeasure<TSelf>
+{
+    static abstract TSelf Add(params ReadOnlySpan<TSelf> values); // no overhead compared to Add(a, b) and overload
+    static abstract TSelf Add<T>(ReadOnlySpan<T> values) where T : IFTreeElement<TSelf>; // for digits
+}
+
+public interface IFTreeElement<V> where V : struct, IFTreeMeasure<V> { V Measure { get; } }
 
 /// <summary>
 /// A functional representation of persistent sequences supporting access to the ends in amortized constant time,
@@ -14,8 +22,8 @@ using static FTreeUtils;
 /// <remarks> 
 /// Based on https://www.staff.city.ac.uk/~ross/papers/FingerTree.pdf
 /// </remarks>
-public abstract class FTree<T, V> : IEnumerable<T>, IMeasured<V>
-where T : IMeasured<V> where V : struct, IMeasure<V>
+public abstract class FTree<T, V> : IEnumerable<T>, IFTreeElement<V>
+where T : IFTreeElement<V> where V : struct, IFTreeMeasure<V>
 {
     private FTree() { } // only allow nested types to inherit
 
@@ -243,232 +251,5 @@ where T : IMeasured<V> where V : struct, IMeasure<V>
             for (var i = pr.Values.Length - 1; i >= 0; --i) 
                 yield return pr.Values[i];
         }
-    }
-}
-
-public static class FTree
-{
-    internal static View<A, V> toViewL<A, V>(FTree<A, V> self) where A : IMeasured<V> where V : struct, IMeasure<V> {
-        return self switch {
-            FTree<A, V>.EmptyT => new View<A, V>(),
-            FTree<A, V>.Single(var x) => new View<A, V>(x, new(FTree<A, V>.EmptyT.Instance)),
-            FTree<A, V>.Deep(var pr, var m, var sf) => new View<A, V>(pr.Head, new(() => deepL(pr.Tail, m, sf))),
-            _ => throw new InvalidOperationException()
-        };
-    }
-    
-    internal static FTree<A, V> deepL<A, V>(
-        ReadOnlySpan<A> pr, 
-        LazyThunkClass<FTree<Node<A, V>, V>> m, 
-        Digit<A, V> sf
-    ) where A : IMeasured<V> where V : struct, IMeasure<V> {
-        if (pr.Length > 0) 
-            return new FTree<A, V>.Deep(new(pr), m, sf);
-        
-        return m.Value switch {
-            FTree<Node<A, V>, V>.EmptyT => 
-                FTree<A, V>.createRangeOptimized(sf.Values),
-            FTree<Node<A, V>, V>.Single(var x) => 
-                new FTree<A, V>.Deep(x.ToDigit(), new(FTree<Node<A, V>, V>.Empty), sf),
-            FTree<Node<A, V>, V>.Deep(var pr2, var m2, var sf2) => 
-                new FTree<A, V>.Deep(pr2.Head.ToDigit(), new(() => deepL(pr2.Tail, m2, sf2)), sf),
-            _ => throw new InvalidOperationException()
-        };
-    }
-    
-    
-    internal static View<A, V> toViewR<A, V>(FTree<A, V> self) where A : IMeasured<V> where V : struct, IMeasure<V> {
-        return self switch {
-            FTree<A, V>.EmptyT => new View<A, V>(),
-            FTree<A, V>.Single(var x) => new View<A, V>(x, new(FTree<A, V>.EmptyT.Instance)),
-            FTree<A, V>.Deep(var pr, var m, var sf) => new View<A, V>(sf.Last, new(() => deepR(pr, m, sf.Init))),
-            _ => throw new InvalidOperationException()
-        };
-    }
-    
-    internal static FTree<A, V> deepR<A, V>(
-        Digit<A, V> pr,
-        LazyThunkClass<FTree<Node<A, V>, V>> m, 
-        ReadOnlySpan<A> sf
-    ) where A : IMeasured<V> where V : struct, IMeasure<V> {
-        if (sf.Length > 0) 
-            return new FTree<A, V>.Deep(pr, m, new(sf));
-        
-        return m.Value switch {
-            FTree<Node<A, V>, V>.EmptyT => 
-                FTree<A, V>.createRangeOptimized(pr.Values),
-            FTree<Node<A, V>, V>.Single(var x) => 
-                new FTree<A, V>.Deep(pr, new(FTree<Node<A, V>, V>.Empty), x.ToDigit()),
-            FTree<Node<A, V>, V>.Deep(var pr2, var m2, var sf2) => 
-                new FTree<A, V>.Deep(pr, new(() => deepR(pr2, m2, sf2.Init)), sf2.Last.ToDigit()),
-            _ => throw new InvalidOperationException()
-        };
-    }
-}
-
-internal readonly struct Digit<T, V> where T : IMeasured<V> where V : struct, IMeasure<V>
-{
-    public readonly T[] Values; // between 1 and 4 values
-    private readonly V measure; // could be lazy, but that adds overhead on average
-
-    public V Measure => measure;
-
-    public Digit(params ReadOnlySpan<T> values) {
-        Values = values.ToArray();
-        measure = V.Add<T>(Values);
-    }
-
-    public TRes ReduceRight<TRes>(Func<T, TRes, TRes> reduceOp, TRes other) {
-        var acc = other;
-        for (var i = Values.Length - 1; i >= 0; --i) 
-            acc = reduceOp(Values[i], acc);
-        return acc;
-    }
-
-    public TRes ReduceLeft<TRes>(Func<TRes, T, TRes> reduceOp, TRes other) {
-        var acc = other;
-        for (var i = 0; i < Values.Length; ++i) 
-            acc = reduceOp(acc, Values[i]);
-        return acc;
-    }
-
-    public Digit<T, V> Prepend(T value) => Values.Length switch {
-        1 => new(value, Values[0]),
-        2 => new(value, Values[0], Values[1]),
-        3 => new(value, Values[0], Values[1], Values[2]),
-        _ => throw new InvalidOperationException()
-    };
-    
-    public Digit<T, V> Append(T value) => Values.Length switch {
-        1 => new(Values[0], value),
-        2 => new(Values[0], Values[1], value),
-        3 => new(Values[0], Values[1], Values[2], value),
-        _ => throw new InvalidOperationException()
-    };
-
-    public T Head => Values[0];
-    public ReadOnlySpan<T> Tail => Values.AsSpan()[1..];
-    
-    public T Last => Values[^1];
-    public ReadOnlySpan<T> Init => Values.AsSpan()[..^1];
-}
-
-public interface IMeasure<TSelf> where TSelf : struct, IMeasure<TSelf>
-{
-    static abstract TSelf Add(params ReadOnlySpan<TSelf> values);
-    static abstract TSelf Add<T>(ReadOnlySpan<T> values) where T : IMeasured<TSelf>;
-}
-
-public interface IMeasured<V> where V : struct, IMeasure<V> { V Measure { get; } }
-
-internal sealed class Node<T, V> : IMeasured<V> where T : IMeasured<V> where V : struct, IMeasure<V>
-{
-    public readonly bool HasThird;
-    public readonly T First, Second, Third;
-
-    private bool _hasMeasure;
-    private V _measure;
-    
-    public V Measure {
-        get {
-            if (_hasMeasure) return _measure;
-            _measure = HasThird
-                ? V.Add(First.Measure, Second.Measure, Third.Measure)
-                : V.Add(First.Measure, Second.Measure);
-            _hasMeasure = true;
-            return _measure;
-        }
-    }
-
-    public Node(T first, T second) {
-        HasThird = false;
-        First = first;
-        Second = second;
-        Third = default;
-    }
-    
-    public Node(T first, T second, T third) {
-        HasThird = true;
-        First = first;
-        Second = second;
-        Third = third;
-    }
-
-    public TRes ReduceRight<TRes>(Func<T, TRes, TRes> reduceOp, TRes other) {
-        var start = HasThird ? reduceOp(Third, other) : other;
-        return reduceOp(First, reduceOp(Second, start));
-    }
-
-    public TRes ReduceLeft<TRes>(Func<TRes, T, TRes> reduceOp, TRes other) {
-        var start = HasThird ? reduceOp(other, Third) : other;
-        return reduceOp(reduceOp(start, Second), First);
-    }
-
-    public Digit<T, V> ToDigit() => HasThird ? new Digit<T, V>(First, Second, Third) : new Digit<T, V>(First, Second);
-}
-
-internal readonly struct View<T, V>(T head, LazyThunk<FTree<T, V>> tail)
-    where T : IMeasured<V>
-    where V : struct, IMeasure<V>
-{
-    public View() : this(default, default) { }
-    public readonly bool IsCons = true;
-    public readonly T Head = head;
-    public FTree<T, V> Tail => tail.Value;
-}
-
-// Either a producer or an already calculated value.
-// The extra level of indirection adds performance when initialized eagerly.
-// A struct is worse in some cases, e.g. when reusing the thunk in case of Deep.
-internal sealed class LazyThunkClass<T>
-{
-    private bool _hasValue;
-    private T _value;
-    private Func<T> _producer;
-
-    public T Value { get {
-        if (!_hasValue) {
-            _value = _producer();
-            _hasValue = true;
-            _producer = null;
-        }
-        return _value;
-    }}
-
-    public LazyThunkClass(T value) {
-        _value = value;
-        _hasValue = true;
-    }
-
-    public LazyThunkClass(Func<T> getter) {
-        _producer = getter;
-    }
-}
-
-// Either a producer or an already calculated value.
-// The extra level of indirection adds performance when initialized eagerly.
-// Use carefully! You don't want to copy this by accident, making the cached value useless.
-internal struct LazyThunk<T>
-{
-    private bool _hasValue;
-    private T _value;
-    private Func<T> _producer;
-
-    public T Value { get {
-        if (!_hasValue) {
-            _value = _producer();
-            _hasValue = true;
-            _producer = null;
-        }
-        return _value;
-    }}
-
-    public LazyThunk(T value) {
-        _value = value;
-        _hasValue = true;
-    }
-
-    public LazyThunk(Func<T> getter) {
-        _producer = getter;
     }
 }

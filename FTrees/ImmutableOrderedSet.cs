@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Runtime.CompilerServices;
+using DracTec.FTrees.Impl;
 
 namespace DracTec.FTrees;
 
@@ -37,7 +38,7 @@ public readonly struct ImmutableOrderedSet<T> : IEnumerable<T> where T : ICompar
     // Note: no support for IComparer: how would we even cache those? in all keys? therefore all elements?
         
     private readonly FTree<OrderedElem<T>, Key<T>> backing;
-    internal ImmutableOrderedSet(FTree<OrderedElem<T>, Key<T>> backing) => this.backing = backing;
+    private ImmutableOrderedSet(FTree<OrderedElem<T>, Key<T>> backing) => this.backing = backing;
         
     public static ImmutableOrderedSet<T> Empty => new(FTree<OrderedElem<T>, Key<T>>.Empty);
 
@@ -78,7 +79,7 @@ public readonly struct ImmutableOrderedSet<T> : IEnumerable<T> where T : ICompar
             if (xs.IsEmpty) return ys;
             if (ys.IsEmpty) return xs;
                 
-            var view = FTree.toViewL(ys);
+            var view = FTreeImplUtils.toViewL(ys);
                 
             // ReSharper disable once AccessToModifiedClosure // false positive
             var (l, x, r) = xs.SplitTree(x => x >= view.Head.Measure, new());
@@ -118,7 +119,8 @@ public readonly struct ImmutableOrderedSet<T> : IEnumerable<T> where T : ICompar
     #endregion
 }
 
-internal static class ImmutableOrderedSetUtils {
+internal static class ImmutableOrderedSetUtils 
+{
     // guaranteed to be O(logn)
     // like SplitTree, but doesn't generate unnecessary new trees
     // also should check for the first `i > target` and stop
@@ -126,12 +128,12 @@ internal static class ImmutableOrderedSetUtils {
         this FTree<T, TKey> tree, 
         ref TKey target, 
         ref TKey i
-    ) where T : IMeasured<TKey> where TKey : struct, IMeasure<TKey>, IComparable<TKey> {
+    ) where T : IFTreeElement<TKey> where TKey : struct, IFTreeMeasure<TKey>, IComparable<TKey> {
         if (tree is FTree<T, TKey>.Single s) return ref s.Value;
         if (tree is FTree<T, TKey>.Deep(var pr, var m, var sf)) {
             var vpr = TKey.Add(i, pr.Measure);
             if (vpr.CompareTo(target) <= 0) {
-                return ref lookupDigit(ref target, ref i, pr.Values);
+                return ref lookupDigit(ref target, ref i, pr.Values.AsSpan());
             }
 
             i = vpr;
@@ -143,7 +145,7 @@ internal static class ImmutableOrderedSetUtils {
             }
 
             i = vm;
-            return ref lookupDigit(ref target, ref i, sf.Values);
+            return ref lookupDigit(ref target, ref i, sf.Values.AsSpan());
         }
         throw new InvalidOperationException();
             
@@ -158,21 +160,21 @@ internal static class ImmutableOrderedSetUtils {
             return ref node.Third;
         }
             
-        static ref readonly T lookupDigit(ref TKey target, ref TKey i, T[] digit) {
+        static ref readonly T lookupDigit(ref TKey target, ref TKey i, ReadOnlySpan<T> digit) {
             if (digit.Length == 1)
                 return ref digit[0];
             for (var idx = 0; idx < digit.Length; ++idx) {
-                ref var curr = ref digit[idx];
+                ref readonly var curr = ref digit[idx];
                 var newI = TKey.Add(i, curr.Measure);
                 if (newI.CompareTo(target) > 0) return ref curr;
                 i = newI;
             }
-            return ref digit[digit.Length - 1];
+            return ref digit[^1];
         }
     }
 }
 
-internal readonly struct Key<T>(T value) : IMeasure<Key<T>>, IComparable<Key<T>>
+internal readonly struct Key<T>(T value) : IFTreeMeasure<Key<T>>, IComparable<Key<T>>
     where T : IComparable<T>
 {
     public readonly bool HasValue = true;
@@ -200,7 +202,7 @@ internal readonly struct Key<T>(T value) : IMeasure<Key<T>>, IComparable<Key<T>>
         return default;
     }
 
-    public static Key<T> Add<A>(ReadOnlySpan<A> values) where A : IMeasured<Key<T>> {
+    public static Key<T> Add<A>(ReadOnlySpan<A> values) where A : IFTreeElement<Key<T>> {
         for (var i = values.Length - 1; i >= 0; --i) {
             var curr = values[i].Measure;
             if (curr.HasValue) return curr;
@@ -209,9 +211,8 @@ internal readonly struct Key<T>(T value) : IMeasure<Key<T>>, IComparable<Key<T>>
     }
 }
 
-internal readonly struct OrderedElem<T> : IMeasured<Key<T>> where T : IComparable<T>
+internal readonly struct OrderedElem<T>(T value) : IFTreeElement<Key<T>> where T : IComparable<T>
 {
-    public readonly T Value;
-    public OrderedElem(T value) => Value = value;
+    public readonly T Value = value;
     public Key<T> Measure => new(Value);
 }

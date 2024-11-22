@@ -7,8 +7,4 @@
     <RootNamespace>DracTec.FTrees</RootNamespace>
   </PropertyGroup>
 
-  <ItemGroup>
-    <!-- Add NuGet packages -->
-  </ItemGroup>
-
 </Project>

@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Runtime.CompilerServices;
+using DracTec.FTrees.Impl;
 
 namespace DracTec.FTrees;
 
@@ -52,7 +53,7 @@ public readonly struct ImmutableIntervalTree<T, P> where P : IComparable<P>
             FTree<Interval<T, P>, KeyPrio<P>> xs, 
             FTree<Interval<T, P>, KeyPrio<P>> ys
         ) {
-            var view = FTree.toViewL(ys);
+            var view = FTreeImplUtils.toViewL(ys);
             if (!view.IsCons) return xs;
             // ReSharper disable once AccessToModifiedClosure // false positive
             var (l, r) = xs.Split(x => x.Key > view.Head.measure.Key);
@@ -71,26 +72,26 @@ public readonly struct ImmutableIntervalTree<T, P> where P : IComparable<P>
         return matches(backing.TakeUntil(x => x.Greater(high)));
             
         ImmutableStack<Interval<T, P>> matches(FTree<Interval<T, P>, KeyPrio<P>> xs) {
-            var view = FTree.toViewL(xs.DropUntil(x => x.AtLeast(low)));
+            var view = FTreeImplUtils.toViewL(xs.DropUntil(x => x.AtLeast(low)));
             if (!view.IsCons) return ImmutableStack<Interval<T, P>>.Empty;
             return matches(view.Tail).Push(view.Head);
         }
     }
 }
     
-public readonly struct Interval<T, P>(T value, P low, P high) : IMeasured<KeyPrio<P>>
+public readonly struct Interval<T, P>(T value, P low, P high) : IFTreeElement<KeyPrio<P>>
     where P : IComparable<P>
 {
     public readonly T Value = value;
     public readonly P Low = low; // inclusive
     public readonly P High = high; // inclusive
 
-    KeyPrio<P> IMeasured<KeyPrio<P>>.Measure => measure;
+    KeyPrio<P> IFTreeElement<KeyPrio<P>>.Measure => measure;
     internal KeyPrio<P> measure => new(new Key<P>(Low), new Prio<P>(High));
 }
 
 internal readonly struct KeyPrio<P>(Key<P> key, Prio<P> prio)
-    : IMeasure<KeyPrio<P>>, IMeasured<Key<P>>, IMeasured<Prio<P>>
+    : IFTreeMeasure<KeyPrio<P>>, IFTreeElement<Key<P>>, IFTreeElement<Prio<P>>
     where P : IComparable<P>
 {
     public readonly Key<P> Key = key;
@@ -105,7 +106,7 @@ internal readonly struct KeyPrio<P>(Key<P> key, Prio<P> prio)
         return new(key, prio);
     }
 
-    public static KeyPrio<P> Add<T>(ReadOnlySpan<T> values) where T : IMeasured<KeyPrio<P>> {
+    public static KeyPrio<P> Add<T>(ReadOnlySpan<T> values) where T : IFTreeElement<KeyPrio<P>> {
         Key<P> key = default;
         Prio<P> prio = default;
         for (var i = 0; i < values.Length; ++i) {
@@ -116,6 +117,6 @@ internal readonly struct KeyPrio<P>(Key<P> key, Prio<P> prio)
         return new(key, prio);
     }
 
-    Key<P> IMeasured<Key<P>>.Measure => Key;
-    Prio<P> IMeasured<Prio<P>>.Measure => Prio;
+    Key<P> IFTreeElement<Key<P>>.Measure => Key;
+    Prio<P> IFTreeElement<Prio<P>>.Measure => Prio;
 }

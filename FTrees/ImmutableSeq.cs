@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using DracTec.FTrees.Impl;
 
 namespace DracTec.FTrees;
 
@@ -247,7 +248,7 @@ public readonly struct ImmutableSeq<T> : IImmutableList<T>
     #endregion
 }
     
-internal readonly struct Size(int value) : IMeasure<Size>
+internal readonly struct Size(int value) : IFTreeMeasure<Size>
 {
     public readonly int Value = value;
 
@@ -258,7 +259,7 @@ internal readonly struct Size(int value) : IMeasure<Size>
         return new(sum);
     }
 
-    public static Size Add<T>(ReadOnlySpan<T> values) where T : IMeasured<Size> {
+    public static Size Add<T>(ReadOnlySpan<T> values) where T : IFTreeElement<Size> {
         var sum = 0;
         for (var i = 0; i < values.Length; ++i) 
             sum += values[i].Measure.Value;
@@ -266,7 +267,7 @@ internal readonly struct Size(int value) : IMeasure<Size>
     }
 }
 
-internal readonly struct SeqElem<T>(T value) : IMeasured<Size>
+internal readonly struct SeqElem<T>(T value) : IFTreeElement<Size>
 {
     public readonly T Value = value;
     public Size Measure => new(1);
@@ -277,7 +278,7 @@ internal static class ImmutableSeqUtils {
     // like SplitTree, but doesn't generate unnecessary new trees
     // also should check for the first `i > target` and stop
     internal static ref readonly T LookupTree<T>(this FTree<T, Size> tree, int target, int i) 
-        where T : IMeasured<Size>
+        where T : IFTreeElement<Size>
     {
         if (tree is FTree<T, Size>.Single s) 
             return ref s.Value;
@@ -285,7 +286,7 @@ internal static class ImmutableSeqUtils {
         if (tree is FTree<T, Size>.Deep(var pr, var m, var sf)) {
             var vpr = i + pr.Measure.Value;
             if (vpr > target) 
-                return ref lookupDigit(target, i, pr.Values);
+                return ref lookupDigit(target, i, pr.Values.AsSpan());
 
             i = vpr;
             var mValue = m.Value;
@@ -296,7 +297,7 @@ internal static class ImmutableSeqUtils {
             }
 
             i = vm;
-            return ref lookupDigit(target, i, sf.Values);
+            return ref lookupDigit(target, i, sf.Values.AsSpan());
         }
         throw new InvalidOperationException();
             
@@ -312,11 +313,11 @@ internal static class ImmutableSeqUtils {
             return ref node.Third;
         }
             
-        static ref readonly T lookupDigit(int target, int i, T[] digit) {
+        static ref readonly T lookupDigit(int target, int i, ReadOnlySpan<T> digit) {
             if (digit.Length == 1)
                 return ref digit[0];
             for (var idx = 0; idx < digit.Length; ++idx) {
-                ref var curr = ref digit[idx];
+                ref readonly var curr = ref digit[idx];
                 var newI = i + curr.Measure.Value;
                 if (newI.CompareTo(target) > 0) return ref curr;
                 i = newI;
