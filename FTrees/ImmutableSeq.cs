@@ -50,8 +50,8 @@ public readonly struct ImmutableSeq<T> : IImmutableList<T>
             if (idx >= Count) throw new IndexOutOfRangeException();
             if (idx == 0) return ref Head;
             if (idx == Count - 1) return ref Last;
-                
-            return ref backing.LookupTree(idx, 0).Value;
+
+            return ref backing.LookupTree(idx).Value;
         }
     }
     
@@ -275,11 +275,21 @@ internal readonly struct SeqElem<T>(T value) : IFTreeElement<Size>
     public Size Measure => new(1);
 }
 
-internal static class ImmutableSeqUtils {
+internal static class ImmutableSeqUtils
+{
+
     // guaranteed to be O(logn)
     // like SplitTree, but doesn't generate unnecessary new trees
     // also should check for the first `i > target` and stop
-    internal static ref readonly T LookupTree<T>(this FTree<T, Size> tree, int target, int i) 
+    internal static ref readonly T LookupTree<T>(this FTree<T, Size> tree, int target) where T : IFTreeElement<Size> {
+        // The C# lifetime analyzer cannot prove that a local variable will not be included in the returned T somehow.
+        // As a consequence, it cannot allow stack memory to leak => we need to heap allocate this.
+        var cell = new[]{0}; 
+        return ref lookupTree(tree, target, ref cell[0]);
+    }
+    
+    // i is maintained as a memory slot and updated in the recursion
+    private static ref readonly T lookupTree<T>(this FTree<T, Size> tree, int target, ref int i) 
         where T : IFTreeElement<Size>
     {
         if (tree is FTree<T, Size>.Single s) 
@@ -294,7 +304,7 @@ internal static class ImmutableSeqUtils {
             var mValue = m.Value;
             var vm = vpr + mValue.Measure.Value;
             if (vm > target) {
-                var xs = LookupTree(mValue, target, i);
+                var xs = lookupTree(mValue, target, ref i);
                 return ref lookupNode(target, i, xs);
             }
 
@@ -324,7 +334,9 @@ internal static class ImmutableSeqUtils {
                 if (newI.CompareTo(target) > 0) return ref curr;
                 i = newI;
             }
-            return ref digit[digit.Length - 1];
+            return ref digit[^1];
         }
     }
+    
+    
 }
