@@ -45,39 +45,31 @@ where T : IFTreeElement<V> where V : struct, IFTreeMeasure<V>
         public override V Measure => Value.Measure;
     }
 
-    internal sealed class Deep : FTree<T, V>
+    internal sealed class Deep(
+        Digit<T, V> left,
+        LazyThunk<FTree<Node<T, V>, V>> spine,
+        Digit<T, V> right
+    ) : FTree<T, V>
     {
-        private readonly LazyThunkClass<V> measure;
-        public readonly Digit<T, V> Left;
-        private readonly LazyThunkClass<FTree<Node<T, V>, V>> spine;
-        public readonly Digit<T, V> Right;
-
-        public FTree<Node<T, V>, V> Spine => spine.Value;
-
-        public Deep(
-            Digit<T, V> left,
-            LazyThunkClass<FTree<Node<T, V>, V>> spine,
-            Digit<T, V> right
-        ) {
-            Left = left;
-            this.spine = spine;
-            Right = right;
-            measure = new(measureNow);
-        }
-
-        private V measureNow() => V.Add(Left.Measure, Spine.Measure, Right.Measure);
+        private V _measure;
+        private bool _hasMeasure = false;
         
+        public readonly Digit<T, V> Left = left;
+        public readonly Digit<T, V> Right = right;
+        public readonly LazyThunk<FTree<Node<T, V>, V>> Spine = spine;
+
         public void Deconstruct(
             out Digit<T, V> left,
-            out LazyThunkClass<FTree<Node<T, V>, V>> outSpine,
+            out LazyThunk<FTree<Node<T, V>, V>> outSpine,
             out Digit<T, V> right
         ) {
-            left = this.Left;
-            outSpine = this.spine;
-            right = this.Right;
+            left = Left;
+            outSpine = Spine;
+            right = Right;
         }
 
-        public override V Measure => measure.Value;
+        public override V Measure => _hasMeasure ? _measure 
+            : ((_measure, _hasMeasure) = (V.Add(Left.Measure, Spine.Value.Measure, Right.Measure), true))._measure;
     }
     
     public TRes ReduceRight<TRes>(Func<T, TRes, TRes> reduceOp, TRes other) => this switch {
@@ -184,7 +176,7 @@ where T : IFTreeElement<V> where V : struct, IFTreeMeasure<V>
     public FTree<T, V> Init => toViewR(this).Tail;
 
     // in paper: |><| (wtf)
-    public FTree<T, V> Concat(FTree<T, V> other) => app3(this, new Digit<T, V>([]), other);
+    public FTree<T, V> Concat(FTree<T, V> other) => app3(this, new Digit<T, V>(), other);
     
     // guaranteed to be O(logn)
     public (FTree<T, V>, T, FTree<T, V>) SplitTree(Func<V, bool> p, V i) {

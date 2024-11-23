@@ -9,15 +9,15 @@ internal static class FTreeImplUtils
     internal static View<A, V> toViewL<A, V>(FTree<A, V> self) where A : IFTreeElement<V> where V : struct, IFTreeMeasure<V> {
         return self switch {
             FTree<A, V>.EmptyT => new View<A, V>(),
-            FTree<A, V>.Single(var x) => new View<A, V>(x, new(FTree<A, V>.EmptyT.Instance)),
-            FTree<A, V>.Deep(var pr, var m, var sf) => new View<A, V>(pr.Head, new(() => deepL(pr.Tail, m, sf))),
+            FTree<A, V>.Single(var x) => new View<A, V>(x, FTree<A, V>.EmptyT.Instance),
+            FTree<A, V>.Deep(var pr, var m, var sf) => new View<A, V>(pr.Head, deepL(pr.Tail, m, sf)),
             _ => throw new InvalidOperationException()
         };
     }
     
     internal static FTree<A, V> deepL<A, V>(
         ReadOnlySpan<A> pr, 
-        LazyThunkClass<FTree<Node<A, V>, V>> m, 
+        LazyThunk<FTree<Node<A, V>, V>> m, 
         Digit<A, V> sf
     ) where A : IFTreeElement<V> where V : struct, IFTreeMeasure<V> {
         if (pr.Length > 0) 
@@ -38,15 +38,15 @@ internal static class FTreeImplUtils
     internal static View<A, V> toViewR<A, V>(FTree<A, V> self) where A : IFTreeElement<V> where V : struct, IFTreeMeasure<V> {
         return self switch {
             FTree<A, V>.EmptyT => new View<A, V>(),
-            FTree<A, V>.Single(var x) => new View<A, V>(x, new(FTree<A, V>.EmptyT.Instance)),
-            FTree<A, V>.Deep(var pr, var m, var sf) => new View<A, V>(sf.Last, new(() => deepR(pr, m, sf.Init))),
+            FTree<A, V>.Single(var x) => new View<A, V>(x, FTree<A, V>.EmptyT.Instance),
+            FTree<A, V>.Deep(var pr, var m, var sf) => new View<A, V>(sf.Last, deepR(pr, m, sf.Init)),
             _ => throw new InvalidOperationException()
         };
     }
     
     internal static FTree<A, V> deepR<A, V>(
         Digit<A, V> pr,
-        LazyThunkClass<FTree<Node<A, V>, V>> m, 
+        LazyThunk<FTree<Node<A, V>, V>> m, 
         ReadOnlySpan<A> sf
     ) where A : IFTreeElement<V> where V : struct, IFTreeMeasure<V> {
         if (sf.Length > 0) 

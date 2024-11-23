@@ -9,9 +9,14 @@ internal readonly struct Digit<T, V> where T : IFTreeElement<V> where V : struct
     private readonly V measure; // could be lazy, but that adds overhead on average
 
     public V Measure => measure;
-
-    public Digit(params ReadOnlySpan<T> values) {
+    
+    public Digit(ReadOnlySpan<T> values) {
         Values = [..values];
+        measure = V.Add(Values.AsSpan());
+    }
+
+    public Digit(params ImmutableArray<T> values) {
+        Values = values;
         measure = V.Add(Values.AsSpan());
     }
 

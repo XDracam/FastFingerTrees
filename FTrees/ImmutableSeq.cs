@@ -174,7 +174,7 @@ public readonly struct ImmutableSeq<T> : IImmutableList<T>
     IImmutableList<T> IImmutableList<T>.SetItem(int index, T value) => SetItem(index, value);
     IImmutableList<T> IImmutableList<T>.Clear() => Empty;
         
-    // These are hidden by default because they are slow. Don't use them. Consider a different collection.
+    // These are hidden by default because they are comparatively slow. Don't use them. Consider a different collection.
 
     int IImmutableList<T>.IndexOf(T item, int index, int count, IEqualityComparer<T> equalityComparer) {
         equalityComparer ??= EqualityComparer<T>.Default;
