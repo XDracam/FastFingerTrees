@@ -73,9 +73,10 @@ public readonly struct ImmutableOrderedSet<T> : IImmutableSet<T> where T : IComp
     public ImmutableOrderedSet<T> Remove(T value, out bool wasRemoved) {
         var (l, r) = backing.Split(x => x >= new Key<T>(value));
         var (elem, r2) = r.Split(x => x > new Key<T>(value));
-        wasRemoved = !elem.IsEmpty;
+        var numRemoved = elem.Count();
+        wasRemoved = numRemoved > 0;
         if (wasRemoved) 
-            return new(l.Concat(r2), Count - 1);
+            return new(l.Concat(r2), Count - numRemoved);
         else return this;
     }
 
@@ -311,22 +312,23 @@ internal readonly struct Key<T>(T value)
         return Value.CompareTo(other.Value);
     }
 
-    public static bool operator<(in Key<T> left, in Key<T> right) =>
+    public static bool operator <(in Key<T> left, in Key<T> right) =>
         !left.HasValue || (right.HasValue && left.Value.CompareTo(right.Value) < 0);
-    public static bool operator>(in Key<T> left, in Key<T> right) => 
+
+    public static bool operator >(in Key<T> left, in Key<T> right) =>
         !right.HasValue || (left.HasValue && left.Value.CompareTo(right.Value) > 0);
 
     public static bool operator<=(in Key<T> left, in Key<T> right) => 
-        !left.HasValue && (!right.HasValue || left.Value.CompareTo(right.Value) <= 0);
+        !left.HasValue || !right.HasValue || left.Value.CompareTo(right.Value) <= 0;
     
     public static bool operator>=(in Key<T> left, in Key<T> right) => 
-        !right.HasValue && (!left.HasValue || left.Value.CompareTo(right.Value) >= 0);
+        !right.HasValue || !left.HasValue || left.Value.CompareTo(right.Value) >= 0;
 
-    public static bool operator==(in Key<T> a, in Key<T> b) => 
+    public static bool operator ==(in Key<T> a, in Key<T> b) =>
         a.HasValue == b.HasValue && EqualityComparer<T>.Default.Equals(a.Value, b.Value);
     
     public static bool operator!=(in Key<T> a, in Key<T> b) => 
-        a.HasValue == b.HasValue && !EqualityComparer<T>.Default.Equals(a.Value, b.Value);
+        a.HasValue != b.HasValue || !EqualityComparer<T>.Default.Equals(a.Value, b.Value);
 
     public bool Equals(Key<T> other) => this == other;
     public override bool Equals(object obj) => obj is Key<T> other && Equals(other);
