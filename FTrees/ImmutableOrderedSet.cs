@@ -9,15 +9,19 @@ namespace DracTec.FTrees;
 
 public static class ImmutableOrderedSet
 {
-    public static ImmutableOrderedSet<T> Create<T>(params ReadOnlySpan<T> values) where T : IComparable<T> {
+    public static ImmutableOrderedSet<T> Create<T>(params ReadOnlySpan<T> values) 
+    where T : IComparable<T>, IEquatable<T> {
         var res = ImmutableOrderedSet<T>.Empty;
-        foreach (var item in values) res = res.Add(item);
+        foreach (var item in values) 
+            res = res.Add(item);
         return res;
     }
         
-    public static ImmutableOrderedSet<T> CreateRange<T>(IEnumerable<T> values) where T : IComparable<T> {
+    public static ImmutableOrderedSet<T> CreateRange<T>(IEnumerable<T> values) 
+    where T : IComparable<T>, IEquatable<T> {
         var res = ImmutableOrderedSet<T>.Empty;
-        foreach (var item in values) res = res.Add(item);
+        foreach (var item in values) 
+            res = res.Add(item);
         return res;
     }
 }
@@ -32,7 +36,7 @@ public static class ImmutableOrderedSet
 /// An object may be present multiple times. Calling <see cref="Remove"/> will remove all instances.
 /// </remarks>
 [CollectionBuilder(typeof(ImmutableOrderedSet), nameof(ImmutableOrderedSet.Create))]
-public readonly struct ImmutableOrderedSet<T> : IEnumerable<T> where T : IComparable<T>
+public readonly struct ImmutableOrderedSet<T> : IEnumerable<T> where T : IComparable<T>, IEquatable<T>
 {
     // TODO: implement IImmutableSet<T> efficiently somehow
     // Note: no support for IComparer: how would we even cache those? in all keys? therefore all elements?
@@ -83,7 +87,7 @@ public readonly struct ImmutableOrderedSet<T> : IEnumerable<T> where T : ICompar
                 
             // ReSharper disable once AccessToModifiedClosure // false positive
             var (l, x, r) = xs.SplitTree(x => x >= view.Head.Measure, new());
-            if (x.Measure.CompareTo(view.Head.Measure) == 0)
+            if (x.Measure == view.Head.Measure)
                 return l.Concat(merge(view.Tail, r).Prepend(x));
             return l.Concat(merge(view.Tail, r.Prepend(x)).Prepend(view.Head));
         }
@@ -93,7 +97,7 @@ public readonly struct ImmutableOrderedSet<T> : IEnumerable<T> where T : ICompar
         var newKey = new Key<T>(value);
         var i = new Key<T>();
         var found = backing.LookupTree(ref newKey, ref i);
-        return found.Value.CompareTo(value) == 0;
+        return EqualityComparer<T>.Default.Equals(found.Value, value);
     }
         
     #region Enumerator
@@ -128,18 +132,17 @@ internal static class ImmutableOrderedSetUtils
         this FTree<T, TKey> tree, 
         ref TKey target, 
         ref TKey i
-    ) where T : IFTreeElement<TKey> where TKey : struct, IFTreeMeasure<TKey>, IComparable<TKey> {
+    ) where T : IFTreeElement<TKey> where TKey : struct, IFTreeMeasure<TKey>, IWithComparisons<TKey> {
         if (tree is FTree<T, TKey>.Single s) return ref s.Value;
         if (tree is FTree<T, TKey>.Deep(var pr, var m, var sf)) {
             var vpr = TKey.Add(i, pr.Measure);
-            if (vpr.CompareTo(target) <= 0) {
+            if (vpr <= target) 
                 return ref lookupDigit(ref target, ref i, pr.Values.AsSpan());
-            }
 
             i = vpr;
             var mValue = m.Value;
             var vm = TKey.Add(vpr, mValue.Measure);
-            if (vm.CompareTo(target) <= 0) {
+            if (vm <= target) {
                 var xs = LookupTree(mValue, ref target, ref i);
                 return ref lookupNode(ref target, ref i, xs);
             }
@@ -152,10 +155,10 @@ internal static class ImmutableOrderedSetUtils
         static ref readonly T lookupNode(ref TKey target, ref TKey i, Node<T, TKey> node) {
             ref readonly var fst = ref node.First;
             var i1 = TKey.Add(i, fst.Measure);
-            if (i1.CompareTo(target) <= 0) 
+            if (i1 <= target) 
                 return ref fst;
             ref readonly var snd = ref node.Second;
-            if (!node.HasThird || TKey.Add(i1, snd.Measure).CompareTo(target) <= 0) 
+            if (!node.HasThird || TKey.Add(i1, snd.Measure) <= target) 
                 return ref snd;
             return ref node.Third;
         }
@@ -166,7 +169,7 @@ internal static class ImmutableOrderedSetUtils
             for (var idx = 0; idx < digit.Length; ++idx) {
                 ref readonly var curr = ref digit[idx];
                 var newI = TKey.Add(i, curr.Measure);
-                if (newI.CompareTo(target) > 0) return ref curr;
+                if (newI > target) return ref curr;
                 i = newI;
             }
             return ref digit[^1];
@@ -174,26 +177,24 @@ internal static class ImmutableOrderedSetUtils
     }
 }
 
-internal readonly struct Key<T>(T value) : IFTreeMeasure<Key<T>>, IComparable<Key<T>>
+internal interface IWithComparisons<T> 
+    : IEquatable<T>, IComparable<T> where T : struct, IWithComparisons<T>
+{
+    static abstract bool operator>(in T a, in T b);
+    static abstract bool operator<(in T a, in T b);
+    static abstract bool operator>=(in T a, in T b);
+    static abstract bool operator<=(in T a, in T b);
+    static abstract bool operator==(in T a, in T b);
+    static abstract bool operator!=(in T a, in T b);
+}
+
+internal readonly struct Key<T>(T value) 
+    : IFTreeMeasure<Key<T>>, IWithComparisons<Key<T>> 
     where T : IComparable<T>
 {
-    public readonly bool HasValue = true;
     public readonly T Value = value;
-
-    public Key<T> Add(in Key<T> other) => other.HasValue ? other : this; // always the highest key
-
-    public int CompareTo(Key<T> other) {
-        if (!HasValue) return -1;
-        if (!other.HasValue) return 1;
-        return Value.CompareTo(other.Value);
-    }
-
-    public static bool operator<(Key<T> left, Key<T> right) => left.CompareTo(right) < 0;
-    public static bool operator>(Key<T> left, Key<T> right) => left.CompareTo(right) > 0;
-
-    public static bool operator<=(Key<T> left, Key<T> right) => left.CompareTo(right) <= 0;
-    public static bool operator>=(Key<T> left, Key<T> right) => left.CompareTo(right) >= 0;
-        
+    public readonly bool HasValue = true;
+    
     public static Key<T> Add(params ReadOnlySpan<Key<T>> values) {
         for (var i = values.Length - 1; i >= 0; --i) {
             ref readonly var curr = ref values[i];
@@ -209,9 +210,38 @@ internal readonly struct Key<T>(T value) : IFTreeMeasure<Key<T>>, IComparable<Ke
         }
         return default;
     }
+
+    public int CompareTo(Key<T> other) {
+        if (!HasValue) return -1;
+        if (!other.HasValue) return 1;
+        return Value.CompareTo(other.Value);
+    }
+
+    public static bool operator<(in Key<T> left, in Key<T> right) =>
+        !left.HasValue || (right.HasValue && left.Value.CompareTo(right.Value) < 0);
+    public static bool operator>(in Key<T> left, in Key<T> right) => 
+        !right.HasValue || (left.HasValue && left.Value.CompareTo(right.Value) > 0);
+
+    public static bool operator<=(in Key<T> left, in Key<T> right) => 
+        !left.HasValue && (!right.HasValue || left.Value.CompareTo(right.Value) <= 0);
+    
+    public static bool operator>=(in Key<T> left, in Key<T> right) => 
+        !right.HasValue && (!left.HasValue || left.Value.CompareTo(right.Value) >= 0);
+
+    public static bool operator==(in Key<T> a, in Key<T> b) => 
+        a.HasValue == b.HasValue && EqualityComparer<T>.Default.Equals(a.Value, b.Value);
+    
+    public static bool operator!=(in Key<T> a, in Key<T> b) => 
+        a.HasValue == b.HasValue && !EqualityComparer<T>.Default.Equals(a.Value, b.Value);
+
+    public bool Equals(Key<T> other) => this == other;
+    public override bool Equals(object obj) => obj is Key<T> other && Equals(other);
+
+    public override int GetHashCode() => HashCode.Combine(HasValue, Value);
 }
 
-internal readonly struct OrderedElem<T>(T value) : IFTreeElement<Key<T>> where T : IComparable<T>
+internal readonly struct OrderedElem<T>(T value) 
+    : IFTreeElement<Key<T>> where T : IComparable<T>, IEquatable<T>
 {
     public readonly T Value = value;
     public Key<T> Measure => new(Value);
