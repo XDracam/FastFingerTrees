@@ -71,13 +71,11 @@ public readonly struct ImmutableOrderedSet<T> : IImmutableSet<T> where T : IComp
 
     // O(log n)
     public ImmutableOrderedSet<T> Remove(T value, out bool wasRemoved) {
+        wasRemoved = Contains(value);
+        if (!wasRemoved) return this;
         var (l, r) = backing.Split(x => x >= new Key<T>(value));
         var (elem, r2) = r.Split(x => x > new Key<T>(value));
-        var numRemoved = elem.Count();
-        wasRemoved = numRemoved > 0;
-        if (wasRemoved) 
-            return new(l.Concat(r2), Count - numRemoved);
-        else return this;
+        return new(l.Concat(r2), Count - elem.Count());
     }
 
     /// O(log n)
@@ -231,13 +229,13 @@ internal static class ImmutableOrderedSetUtils
         if (tree is FTree<T, TKey>.Single s) return ref s.Value;
         if (tree is FTree<T, TKey>.Deep(var pr, var m, var sf)) {
             var vpr = TKey.Add(i, pr.Measure);
-            if (vpr <= target) 
+            if (vpr >= target) 
                 return ref lookupDigit(ref target, ref i, pr.Values.AsSpan());
 
             i = vpr;
             var mValue = m.Value;
             var vm = TKey.Add(vpr, mValue.Measure);
-            if (vm <= target) {
+            if (vm >= target) {
                 var xs = LookupTree(mValue, ref target, ref i);
                 return ref lookupNode(ref target, ref i, xs);
             }
@@ -250,10 +248,10 @@ internal static class ImmutableOrderedSetUtils
         static ref readonly T lookupNode(ref TKey target, ref TKey i, Node<T, TKey> node) {
             ref readonly var fst = ref node.First;
             var i1 = TKey.Add(i, fst.Measure);
-            if (i1 <= target) 
+            if (i1 >= target) 
                 return ref fst;
             ref readonly var snd = ref node.Second;
-            if (!node.HasThird || TKey.Add(i1, snd.Measure) <= target) 
+            if (!node.HasThird || TKey.Add(i1, snd.Measure) >= target) 
                 return ref snd;
             return ref node.Third;
         }
@@ -264,7 +262,7 @@ internal static class ImmutableOrderedSetUtils
             for (var idx = 0; idx < digit.Length; ++idx) {
                 ref readonly var curr = ref digit[idx];
                 var newI = TKey.Add(i, curr.Measure);
-                if (newI > target) return ref curr;
+                if (newI >= target) return ref curr;
                 i = newI;
             }
             return ref digit[^1];

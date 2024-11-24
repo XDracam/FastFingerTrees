@@ -53,4 +53,39 @@ public class ImmutableOrderedSetTests
         var mergedSet = set1.Union(set2);
         ClassicAssert.AreEqual(new[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12 }, mergedSet);
     }
+
+    [Test]
+    public void Contains1_ShouldReturnTrue()
+    {
+        var set = ImmutableOrderedSet.Create(1, 2, 3, 4, 5, 6, 7, 8, 9);
+        ClassicAssert.IsTrue(set.Contains(1));
+    }
+    
+    [Test]
+    public void Contains4_ShouldReturnTrue()
+    {
+        var set = ImmutableOrderedSet.Create(1, 2, 3, 4, 5, 6, 7, 8, 9);
+        ClassicAssert.IsTrue(set.Contains(4));
+    }
+    
+    [Test]
+    public void Contains5_ShouldReturnTrue()
+    {
+        var set = ImmutableOrderedSet.Create(1, 2, 3, 4, 5, 6, 7, 8, 9);
+        ClassicAssert.IsTrue(set.Contains(5));
+    }
+    
+    [Test]
+    public void Contains6_ShouldReturnTrue()
+    {
+        var set = ImmutableOrderedSet.Create(1, 2, 3, 4, 5, 6, 7, 8, 9);
+        ClassicAssert.IsTrue(set.Contains(6));
+    }
+    
+    [Test]
+    public void Contains9_ShouldReturnTrue()
+    {
+        var set = ImmutableOrderedSet.Create(1, 2, 3, 4, 5, 6, 7, 8, 9);
+        ClassicAssert.IsTrue(set.Contains(9));
+    }
 }
