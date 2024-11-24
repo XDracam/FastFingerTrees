@@ -3,7 +3,10 @@ using System.Collections.Immutable;
 
 namespace DracTec.FTrees.Impl;
 
-internal sealed class Digit<T, V> where T : IFTreeElement<V> where V : struct, IFTreeMeasure<V>
+// We are reusing digits as nodes. Node-like digits should have 2 or 3 values.
+// A digit can have between 1 and 4 values, and even none in the case of Concat.
+// This is not validated for performance reasons.
+internal sealed class Digit<T, V> : IFTreeElement<V> where T : IFTreeElement<V> where V : struct, IFTreeMeasure<V>
 {
     public readonly ImmutableArray<T> Values; // between 1 and 4 values
     
@@ -18,14 +21,7 @@ internal sealed class Digit<T, V> where T : IFTreeElement<V> where V : struct, I
     }
     
     public Digit(ReadOnlySpan<T> values) => Values = [..values];
-
     public Digit(params ImmutableArray<T> values) => Values = values;
-    
-    public Digit(ImmutableArray<T> values, V measure) {
-        Values = values;
-        _hasMeasure = true;
-        _measure = measure;
-    }
 
     public TRes ReduceRight<TRes>(Func<T, TRes, TRes> reduceOp, TRes other) {
         var acc = other;
@@ -47,13 +43,8 @@ internal sealed class Digit<T, V> where T : IFTreeElement<V> where V : struct, I
         3 => new(value, Values[0], Values[1], Values[2]),
         _ => throw new InvalidOperationException()
     };
-    
-    public Digit<T, V> Append(T value) => Values.Length switch {
-        1 => new(Values[0], value),
-        2 => new(Values[0], Values[1], value),
-        3 => new(Values[0], Values[1], Values[2], value),
-        _ => throw new InvalidOperationException()
-    };
+
+    public Digit<T, V> Append(T value) => new(Values.Add(value));
 
     public ref readonly T Head => ref Values.AsSpan()[0];
     public ReadOnlySpan<T> Tail => Values.AsSpan()[1..];

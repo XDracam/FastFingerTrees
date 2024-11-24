@@ -237,26 +237,13 @@ internal static class ImmutableOrderedSetUtils
             var vm = TKey.Add(vpr, mValue.Measure);
             if (vm >= target) {
                 var xs = LookupTree(mValue, ref target, ref i);
-                return ref lookupNode(ref target, ref i, xs);
+                return ref lookupDigit(ref target, ref i, xs.Values.AsSpan());
             }
 
             i = vm;
             return ref lookupDigit(ref target, ref i, sf.Values.AsSpan());
         }
         throw new InvalidOperationException();
-            
-        static ref readonly T lookupNode(ref TKey target, ref TKey i, Node<T, TKey> node)
-        {
-            ref readonly var values = ref node.Values;
-            ref readonly var fst = ref values.ItemRef(0);
-            var i1 = TKey.Add(i, fst.Measure);
-            if (i1 >= target) 
-                return ref fst;
-            ref readonly var snd = ref values.ItemRef(1);
-            if (values.Length < 3 || TKey.Add(i1, snd.Measure) >= target) 
-                return ref snd;
-            return ref values.ItemRef(2);
-        }
             
         static ref readonly T lookupDigit(ref TKey target, ref TKey i, ReadOnlySpan<T> digit) {
             if (digit.Length == 1)

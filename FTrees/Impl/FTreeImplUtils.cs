@@ -17,19 +17,19 @@ internal static class FTreeImplUtils
     
     internal static FTree<A, V> deepL<A, V>(
         ReadOnlySpan<A> pr, 
-        LazyThunk<FTree<Node<A, V>, V>> m, 
+        LazyThunk<FTree<Digit<A, V>, V>> m, 
         Digit<A, V> sf
     ) where A : IFTreeElement<V> where V : struct, IFTreeMeasure<V> {
         if (pr.Length > 0) 
             return new FTree<A, V>.Deep(new(pr), m, sf);
         
         return m.Value switch {
-            FTree<Node<A, V>, V>.EmptyT => 
+            FTree<Digit<A, V>, V>.EmptyT => 
                 FTree<A, V>.createRangeOptimized(sf.Values.AsSpan()),
-            FTree<Node<A, V>, V>.Single(var x) => 
-                new FTree<A, V>.Deep(x.ToDigit(), new(FTree<Node<A, V>, V>.Empty), sf),
-            FTree<Node<A, V>, V>.Deep(var pr2, var m2, var sf2) => 
-                new FTree<A, V>.Deep(pr2.Head.ToDigit(), new(() => deepL(pr2.Tail, m2, sf2)), sf),
+            FTree<Digit<A, V>, V>.Single(var x) => 
+                new FTree<A, V>.Deep(x, new(FTree<Digit<A, V>, V>.Empty), sf),
+            FTree<Digit<A, V>, V>.Deep(var pr2, var m2, var sf2) => 
+                new FTree<A, V>.Deep(pr2.Head, new(() => deepL(pr2.Tail, m2, sf2)), sf),
             _ => throw new InvalidOperationException()
         };
     }
@@ -46,19 +46,19 @@ internal static class FTreeImplUtils
     
     internal static FTree<A, V> deepR<A, V>(
         Digit<A, V> pr,
-        LazyThunk<FTree<Node<A, V>, V>> m, 
+        LazyThunk<FTree<Digit<A, V>, V>> m, 
         ReadOnlySpan<A> sf
     ) where A : IFTreeElement<V> where V : struct, IFTreeMeasure<V> {
         if (sf.Length > 0) 
             return new FTree<A, V>.Deep(pr, m, new(sf));
         
         return m.Value switch {
-            FTree<Node<A, V>, V>.EmptyT => 
+            FTree<Digit<A, V>, V>.EmptyT => 
                 FTree<A, V>.createRangeOptimized(pr.Values.AsSpan()),
-            FTree<Node<A, V>, V>.Single(var x) => 
-                new FTree<A, V>.Deep(pr, new(FTree<Node<A, V>, V>.Empty), x.ToDigit()),
-            FTree<Node<A, V>, V>.Deep(var pr2, var m2, var sf2) => 
-                new FTree<A, V>.Deep(pr, new(() => deepR(pr2, m2, sf2.Init)), sf2.Last.ToDigit()),
+            FTree<Digit<A, V>, V>.Single(var x) => 
+                new FTree<A, V>.Deep(pr, new(FTree<Digit<A, V>, V>.Empty), x),
+            FTree<Digit<A, V>, V>.Deep(var pr2, var m2, var sf2) => 
+                new FTree<A, V>.Deep(pr, new(() => deepR(pr2, m2, sf2.Init)), sf2.Last),
             _ => throw new InvalidOperationException()
         };
     }
@@ -78,7 +78,7 @@ internal static class FTreeImplUtils
                     pr1,
                     new(() => app3(
                         m1.Value,
-                        new Digit<Node<A, V>, V>(nodes<A, V>(concat(sf1.Values.AsSpan(), ts.Values.AsSpan(), pr2.Values.AsSpan()))), 
+                        new Digit<Digit<A, V>, V>(nodes<A, V>(concat(sf1.Values.AsSpan(), ts.Values.AsSpan(), pr2.Values.AsSpan()))), 
                         m2.Value
                     )),
                     sf2
@@ -117,24 +117,24 @@ internal static class FTreeImplUtils
     }
     
     // optimized to avoid unnecessary allocations
-    internal static Node<A, V>[] nodes<A, V>(ReadOnlySpan<A> arr) 
+    internal static Digit<A, V>[] nodes<A, V>(ReadOnlySpan<A> arr) 
     where A : IFTreeElement<V> where V : struct, IFTreeMeasure<V> {
         var length = arr.Length;
         var mod = length % 3;
-        var res = new Node<A, V>[(length / 3) + (mod > 0 ? 1 : 0)];
+        var res = new Digit<A, V>[(length / 3) + (mod > 0 ? 1 : 0)];
 
         // 0 -> no node2s, 2 -> 1 node2, 1 -> 2 node2s (all nodes need 2 or 3 items)
-        var numNode2 = (mod * 2) % 3; 
-        var node3EndIdx = length - numNode2 * 2;
+        var numDigit2 = (mod * 2) % 3; 
+        var node3EndIdx = length - numDigit2 * 2;
                 
         var arrIdx = 0;
         var resIdx = 0;
                 
         while (arrIdx < node3EndIdx)
-            res[resIdx++] = new Node<A, V>(arr[arrIdx++], arr[arrIdx++], arr[arrIdx++]);
+            res[resIdx++] = new Digit<A, V>(arr[arrIdx++], arr[arrIdx++], arr[arrIdx++]);
             
-        for (var i = 0; i < numNode2; ++i)
-            res[resIdx++] = new Node<A, V>(arr[arrIdx++], arr[arrIdx++]);
+        for (var i = 0; i < numDigit2; ++i)
+            res[resIdx++] = new Digit<A, V>(arr[arrIdx++], arr[arrIdx++]);
             
         return res;
     }

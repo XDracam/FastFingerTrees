@@ -47,7 +47,7 @@ where T : IFTreeElement<V> where V : struct, IFTreeMeasure<V>
 
     internal sealed class Deep(
         Digit<T, V> left,
-        LazyThunk<FTree<Node<T, V>, V>> spine,
+        LazyThunk<FTree<Digit<T, V>, V>> spine,
         Digit<T, V> right
     ) : FTree<T, V>
     {
@@ -56,11 +56,11 @@ where T : IFTreeElement<V> where V : struct, IFTreeMeasure<V>
         
         public readonly Digit<T, V> Left = left;
         public readonly Digit<T, V> Right = right;
-        public readonly LazyThunk<FTree<Node<T, V>, V>> Spine = spine;
+        public readonly LazyThunk<FTree<Digit<T, V>, V>> Spine = spine;
 
         public void Deconstruct(
             out Digit<T, V> left,
-            out LazyThunk<FTree<Node<T, V>, V>> outSpine,
+            out LazyThunk<FTree<Digit<T, V>, V>> outSpine,
             out Digit<T, V> right
         ) {
             left = Left;
@@ -102,18 +102,18 @@ where T : IFTreeElement<V> where V : struct, IFTreeMeasure<V>
     
     public FTree<T, V> Prepend(T toAdd) => this switch { // in paper: a <| this
         EmptyT => new Single(toAdd),
-        Single(var x) => new Deep(new Digit<T, V>(toAdd), new(FTree<Node<T, V>, V>.EmptyT.Instance), new Digit<T, V>(x)),
+        Single(var x) => new Deep(new Digit<T, V>(toAdd), new(FTree<Digit<T, V>, V>.EmptyT.Instance), new Digit<T, V>(x)),
         Deep({Values: {Length: 4} l}, var m, var sf) => 
-            new Deep(new Digit<T, V>(toAdd, l[0]), new(() => m.Value.Prepend(new Node<T, V>(l[1], l[2], l[3]))), sf),
+            new Deep(new Digit<T, V>(toAdd, l[0]), new(() => m.Value.Prepend(new Digit<T, V>(l[1], l[2], l[3]))), sf),
         Deep(var pr, var m, var sf) => new Deep(pr.Prepend(toAdd), m, sf),
         _ => throw new InvalidOperationException()
     };
     
     public FTree<T, V> Append(T toAdd) => this switch { // in paper: this |> a
         EmptyT => new Single(toAdd),
-        Single(var x) => new Deep(new Digit<T, V>(x), new(FTree<Node<T, V>, V>.EmptyT.Instance), new Digit<T, V>(toAdd)),
+        Single(var x) => new Deep(new Digit<T, V>(x), new(FTree<Digit<T, V>, V>.EmptyT.Instance), new Digit<T, V>(toAdd)),
         Deep(var pr, var m, {Values: {Length: 4} r}) => 
-            new Deep(pr, new(() => m.Value.Append(new Node<T, V>(r[0], r[1], r[2]))), new Digit<T, V>(r[3], toAdd)),
+            new Deep(pr, new(() => m.Value.Append(new Digit<T, V>(r[0], r[1], r[2]))), new Digit<T, V>(r[3], toAdd)),
         Deep(var pr, var m, var sf) => new Deep(pr, m, sf.Append(toAdd)),
         _ => throw new InvalidOperationException()
     };
@@ -136,18 +136,18 @@ where T : IFTreeElement<V> where V : struct, IFTreeMeasure<V>
                 var firstDigitLength = length / 2;
                 return new Deep(
                     new Digit<T, V>(array[..firstDigitLength]), 
-                    new(FTree<Node<T, V>, V>.EmptyT.Instance), 
+                    new(FTree<Digit<T, V>, V>.EmptyT.Instance), 
                     new Digit<T, V>(array[firstDigitLength..])
                 );
             default:
                 var leftDigit = new Digit<T, V>(array[..3]);
                 var rightDigit = new Digit<T, V>(array[^3..]);
 
-                var arrForNodes = array[3..^3].ToArray();
+                var arrForDigits = array[3..^3].ToArray();
                 // Note: node needs 2 or 3 elements
                 return new Deep(
                     leftDigit, 
-                    new(() => FTree<Node<T, V>, V>.createRangeOptimized(nodes<T, V>(arrForNodes))),
+                    new(() => FTree<Digit<T, V>, V>.createRangeOptimized(nodes<T, V>(arrForDigits))),
                     rightDigit
                 );
         }
@@ -192,7 +192,7 @@ where T : IFTreeElement<V> where V : struct, IFTreeMeasure<V>
                 var vm = V.Add(vpr, m.Value.Measure);
                 if (p(vm)) {
                     var (ml, xs, mr) = m.Value.SplitTree(p, vpr);
-                    var (l, x, r) = splitDigit(p, V.Add(vpr, ml.Measure), xs.ToDigit());
+                    var (l, x, r) = splitDigit(p, V.Add(vpr, ml.Measure), xs);
                     return (deepR(pr, new(ml), l), x, deepL(r, new(mr), sf));
                 }
                 else {

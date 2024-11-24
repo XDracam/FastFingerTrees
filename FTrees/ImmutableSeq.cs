@@ -306,26 +306,13 @@ internal static class ImmutableSeqUtils
             var vm = vpr + mValue.Measure.Value;
             if (vm > target) {
                 var xs = lookupTree(mValue, target, i, out i);
-                return ref lookupNode(target, i, xs);
+                return ref lookupDigit(target, i, xs.Values.AsSpan());
             }
 
             i = vm;
             return ref lookupDigit(target, i, sf.Values.AsSpan());
         }
         throw new InvalidOperationException();
-            
-        static ref readonly T lookupNode(int target, int i, Node<T, Size> node) {
-            ref readonly var values = ref node.Values;
-            ref readonly var fst = ref values.ItemRef(0);
-            var i1 = i + fst.Measure.Value;
-            if (i1 > target) 
-                return ref fst;
-            ref readonly var snd = ref values.ItemRef(1);
-            var i2 = i1 + snd.Measure.Value;
-            if (values.Length < 3 || i2 > target) 
-                return ref snd;
-            return ref values.ItemRef(2);
-        }
             
         static ref readonly T lookupDigit(int target, int i, ReadOnlySpan<T> digit) {
             if (digit.Length == 1)
