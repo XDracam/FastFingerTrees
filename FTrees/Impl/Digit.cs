@@ -3,23 +3,28 @@ using System.Collections.Immutable;
 
 namespace DracTec.FTrees.Impl;
 
-internal readonly struct Digit<T, V> where T : IFTreeElement<V> where V : struct, IFTreeMeasure<V>
+internal sealed class Digit<T, V> where T : IFTreeElement<V> where V : struct, IFTreeMeasure<V>
 {
     public readonly ImmutableArray<T> Values; // between 1 and 4 values
-    private readonly V measure; // could be lazy, but that adds overhead on average
-
-    public V Measure => measure;
-
-    public Digit() { Values = ImmutableArray<T>.Empty; }
     
-    public Digit(ReadOnlySpan<T> values) {
-        Values = [..values];
-        measure = V.Add(Values.AsSpan());
-    }
+    private bool _hasMeasure;
+    private V _measure; // could be lazy, but that adds overhead on average
 
-    public Digit(params ImmutableArray<T> values) {
+    public V Measure => _hasMeasure ? _measure : ((_hasMeasure, _measure) = (true, V.Add(Values.AsSpan())))._measure;
+
+    public Digit() {
+        Values = ImmutableArray<T>.Empty;
+        _hasMeasure = true;
+    }
+    
+    public Digit(ReadOnlySpan<T> values) => Values = [..values];
+
+    public Digit(params ImmutableArray<T> values) => Values = values;
+    
+    public Digit(ImmutableArray<T> values, V measure) {
         Values = values;
-        measure = V.Add(Values.AsSpan());
+        _hasMeasure = true;
+        _measure = measure;
     }
 
     public TRes ReduceRight<TRes>(Func<T, TRes, TRes> reduceOp, TRes other) {

@@ -1,49 +1,32 @@
 ﻿using System;
+using System.Collections.Immutable;
 
 namespace DracTec.FTrees.Impl;
 
 internal sealed class Node<T, V> : IFTreeElement<V> where T : IFTreeElement<V> where V : struct, IFTreeMeasure<V>
 {
-    public readonly bool HasThird;
-    public readonly T First, Second, Third;
+    public readonly ImmutableArray<T> Values;
 
     private bool _hasMeasure;
     private V _measure;
     
-    public V Measure {
-        get {
-            if (_hasMeasure) return _measure;
-            _measure = HasThird
-                ? V.Add(First.Measure, Second.Measure, Third.Measure)
-                : V.Add(First.Measure, Second.Measure);
-            _hasMeasure = true;
-            return _measure;
-        }
-    }
+    public V Measure => _hasMeasure ? _measure : ((_hasMeasure, _measure) = (true, V.Add(Values.AsSpan())))._measure;
 
-    public Node(T first, T second) {
-        HasThird = false;
-        First = first;
-        Second = second;
-        Third = default;
-    }
+    public Node() => throw new InvalidOperationException();
+    public Node(T first) => throw new InvalidOperationException();
     
-    public Node(T first, T second, T third) {
-        HasThird = true;
-        First = first;
-        Second = second;
-        Third = third;
-    }
+    public Node(ReadOnlySpan<T> values) => Values = [..values];
+    public Node(params ImmutableArray<T> values) => Values = values;
 
     public TRes ReduceRight<TRes>(Func<T, TRes, TRes> reduceOp, TRes other) {
-        var start = HasThird ? reduceOp(Third, other) : other;
-        return reduceOp(First, reduceOp(Second, start));
+        var start = Values.Length == 3 ? reduceOp(Values[2], other) : other;
+        return reduceOp(Values[0], reduceOp(Values[1], start));
     }
 
     public TRes ReduceLeft<TRes>(Func<TRes, T, TRes> reduceOp, TRes other) {
-        var start = HasThird ? reduceOp(other, Third) : other;
-        return reduceOp(reduceOp(start, Second), First);
+        var start = Values.Length == 3 ? reduceOp(other, Values[2]) : other;
+        return reduceOp(reduceOp(start, Values[1]), Values[0]);
     }
 
-    public Digit<T, V> ToDigit() => HasThird ? new Digit<T, V>(First, Second, Third) : new Digit<T, V>(First, Second);
+    public Digit<T, V> ToDigit() => _hasMeasure ? new(Values, _measure) : new(Values);
 }

@@ -219,15 +219,16 @@ where T : IFTreeElement<V> where V : struct, IFTreeMeasure<V>
     
     public IEnumerator<T> GetEnumerator() {
         if (this is EmptyT) yield break;
-        else if (this is Single(var x)) yield return x;
+        else if (this is Single(var x)) 
+            yield return x;
         else if (this is Deep(var pr, var m, var sf)) {
-            foreach (var elem in pr.Values) yield return elem;
-            foreach (var node in m.Value) {
-                yield return node.First;
-                yield return node.Second;
-                if (node.HasThird) yield return node.Third;
-            }
-            foreach (var elem in sf.Values) yield return elem;
+            foreach (var elem in pr.Values) 
+                yield return elem;
+            foreach (var node in m.Value)
+            foreach (var nodeValue in node.Values) 
+                yield return nodeValue;
+            foreach (var elem in sf.Values) 
+                yield return elem;
         }
     }
     
@@ -240,9 +241,8 @@ where T : IFTreeElement<V> where V : struct, IFTreeMeasure<V>
             var it = m.Value.GetReverseEnumerator();
             while (it.MoveNext()) {
                 var node = it.Current;
-                if (node!.HasThird) yield return node.Third;
-                yield return node.Second;
-                yield return node.First;
+                foreach (var nodeElem in node!.Values) 
+                    yield return nodeElem;
             }
             for (var i = pr.Values.Length - 1; i >= 0; --i) 
                 yield return pr.Values[i];

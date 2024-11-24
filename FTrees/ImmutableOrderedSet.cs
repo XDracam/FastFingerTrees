@@ -245,15 +245,17 @@ internal static class ImmutableOrderedSetUtils
         }
         throw new InvalidOperationException();
             
-        static ref readonly T lookupNode(ref TKey target, ref TKey i, Node<T, TKey> node) {
-            ref readonly var fst = ref node.First;
+        static ref readonly T lookupNode(ref TKey target, ref TKey i, Node<T, TKey> node)
+        {
+            ref readonly var values = ref node.Values;
+            ref readonly var fst = ref values.ItemRef(0);
             var i1 = TKey.Add(i, fst.Measure);
             if (i1 >= target) 
                 return ref fst;
-            ref readonly var snd = ref node.Second;
-            if (!node.HasThird || TKey.Add(i1, snd.Measure) >= target) 
+            ref readonly var snd = ref values.ItemRef(1);
+            if (values.Length < 3 || TKey.Add(i1, snd.Measure) >= target) 
                 return ref snd;
-            return ref node.Third;
+            return ref values.ItemRef(2);
         }
             
         static ref readonly T lookupDigit(ref TKey target, ref TKey i, ReadOnlySpan<T> digit) {
