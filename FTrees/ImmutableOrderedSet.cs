@@ -230,18 +230,18 @@ internal static class ImmutableOrderedSetUtils
         if (tree is FTree<T, TKey>.Deep(var pr, var m, var sf)) {
             var vpr = TKey.Add(i, pr.Measure);
             if (vpr >= target) 
-                return ref lookupDigit(ref target, ref i, pr.Values.AsSpan());
+                return ref lookupDigit(ref target, ref i, pr.Values);
 
             i = vpr;
             var mValue = m.Value;
             var vm = TKey.Add(vpr, mValue.Measure);
             if (vm >= target) {
                 var xs = LookupTree(mValue, ref target, ref i);
-                return ref lookupDigit(ref target, ref i, xs.Values.AsSpan());
+                return ref lookupDigit(ref target, ref i, xs.Values);
             }
 
             i = vm;
-            return ref lookupDigit(ref target, ref i, sf.Values.AsSpan());
+            return ref lookupDigit(ref target, ref i, sf.Values);
         }
         throw new InvalidOperationException();
             

@@ -25,7 +25,7 @@ internal static class FTreeImplUtils
         
         return m.Value switch {
             FTree<Digit<A, V>, V>.EmptyT => 
-                FTree<A, V>.createRangeOptimized(sf.Values.AsSpan()),
+                FTree<A, V>.createRangeOptimized(sf.Values),
             FTree<Digit<A, V>, V>.Single(var x) => 
                 new FTree<A, V>.Deep(x, new(FTree<Digit<A, V>, V>.Empty), sf),
             FTree<Digit<A, V>, V>.Deep(var pr2, var m2, var sf2) => 
@@ -54,7 +54,7 @@ internal static class FTreeImplUtils
         
         return m.Value switch {
             FTree<Digit<A, V>, V>.EmptyT => 
-                FTree<A, V>.createRangeOptimized(pr.Values.AsSpan()),
+                FTree<A, V>.createRangeOptimized(pr.Values),
             FTree<Digit<A, V>, V>.Single(var x) => 
                 new FTree<A, V>.Deep(pr, new(FTree<Digit<A, V>, V>.Empty), x),
             FTree<Digit<A, V>, V>.Deep(var pr2, var m2, var sf2) => 
@@ -78,7 +78,7 @@ internal static class FTreeImplUtils
                     pr1,
                     new(() => app3(
                         m1.Value,
-                        new Digit<Digit<A, V>, V>(nodes<A, V>(concat(sf1.Values.AsSpan(), ts.Values.AsSpan(), pr2.Values.AsSpan()))), 
+                        new Digit<Digit<A, V>, V>(nodes<A, V>(concat(sf1.Values, ts.Values, pr2.Values))), 
                         m2.Value
                     )),
                     sf2
@@ -146,7 +146,7 @@ internal static class FTreeImplUtils
             return new([], digit.Head, []);
         for (var idx = 0; idx < digit.Values.Length; ++idx) {
             i = V.Add(i, digit.Values[idx].Measure);
-            if (p(i)) return split(digit.Values.AsSpan(), idx);
+            if (p(i)) return split(digit.Values, idx);
         }
         // not found anything, take last element
         return new(digit.Init, digit.Last, []);

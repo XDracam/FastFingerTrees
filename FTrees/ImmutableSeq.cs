@@ -299,18 +299,18 @@ internal static class ImmutableSeqUtils
         if (tree is FTree<T, Size>.Deep(var pr, var m, var sf)) {
             var vpr = i + pr.Measure.Value;
             if (vpr > target) 
-                return ref lookupDigit(target, i, pr.Values.AsSpan());
+                return ref lookupDigit(target, i, pr.Values);
 
             i = vpr;
             var mValue = m.Value;
             var vm = vpr + mValue.Measure.Value;
             if (vm > target) {
                 var xs = lookupTree(mValue, target, i, out i);
-                return ref lookupDigit(target, i, xs.Values.AsSpan());
+                return ref lookupDigit(target, i, xs.Values);
             }
 
             i = vm;
-            return ref lookupDigit(target, i, sf.Values.AsSpan());
+            return ref lookupDigit(target, i, sf.Values);
         }
         throw new InvalidOperationException();
             

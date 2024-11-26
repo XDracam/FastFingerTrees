@@ -103,7 +103,7 @@ where T : IFTreeElement<V> where V : struct, IFTreeMeasure<V>
     public FTree<T, V> Prepend(T toAdd) => this switch { // in paper: a <| this
         EmptyT => new Single(toAdd),
         Single(var x) => new Deep(new Digit<T, V>(toAdd), new(FTree<Digit<T, V>, V>.EmptyT.Instance), new Digit<T, V>(x)),
-        Deep({Values: {Length: 4} l}, var m, var sf) => 
+        Deep({Values.Length: 4} l, var m, var sf) => 
             new Deep(new Digit<T, V>(toAdd, l[0]), new(() => m.Value.Prepend(new Digit<T, V>(l[1], l[2], l[3]))), sf),
         Deep(var pr, var m, var sf) => new Deep(pr.Prepend(toAdd), m, sf),
         _ => throw new InvalidOperationException()
@@ -112,7 +112,7 @@ where T : IFTreeElement<V> where V : struct, IFTreeMeasure<V>
     public FTree<T, V> Append(T toAdd) => this switch { // in paper: this |> a
         EmptyT => new Single(toAdd),
         Single(var x) => new Deep(new Digit<T, V>(x), new(FTree<Digit<T, V>, V>.EmptyT.Instance), new Digit<T, V>(toAdd)),
-        Deep(var pr, var m, {Values: {Length: 4} r}) => 
+        Deep(var pr, var m, {Values.Length: 4} r) => 
             new Deep(pr, new(() => m.Value.Append(new Digit<T, V>(r[0], r[1], r[2]))), new Digit<T, V>(r[3], toAdd)),
         Deep(var pr, var m, var sf) => new Deep(pr, m, sf.Append(toAdd)),
         _ => throw new InvalidOperationException()
@@ -222,12 +222,12 @@ where T : IFTreeElement<V> where V : struct, IFTreeMeasure<V>
         else if (this is Single(var x)) 
             yield return x;
         else if (this is Deep(var pr, var m, var sf)) {
-            foreach (var elem in pr.Values) 
+            foreach (var elem in pr) 
                 yield return elem;
             foreach (var node in m.Value)
-            foreach (var nodeValue in node.Values) 
+            foreach (var nodeValue in node) 
                 yield return nodeValue;
-            foreach (var elem in sf.Values) 
+            foreach (var elem in sf) 
                 yield return elem;
         }
     }
@@ -241,7 +241,7 @@ where T : IFTreeElement<V> where V : struct, IFTreeMeasure<V>
             var it = m.Value.GetReverseEnumerator();
             while (it.MoveNext()) {
                 var node = it.Current;
-                foreach (var nodeElem in node!.Values) 
+                foreach (var nodeElem in node!) 
                     yield return nodeElem;
             }
             for (var i = pr.Values.Length - 1; i >= 0; --i) 
