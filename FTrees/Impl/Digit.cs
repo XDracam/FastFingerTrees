@@ -26,7 +26,7 @@ where T : IFTreeElement<V> where V : struct, IFTreeMeasure<V>
     public ReadOnlySpan<T> Values => values[..length];
 
     public Digit() {
-        values = new();
+        values = new Buffer<T>();
         _hasMeasure = true;
     }
 
@@ -72,16 +72,16 @@ where T : IFTreeElement<V> where V : struct, IFTreeMeasure<V>
     }
 
     public Digit<T, V> Prepend(T value) => length switch {
-        1 => new(value, values[0]),
-        2 => new(value, values[0], values[1]),
-        3 => new(value, values[0], values[1], values[2]),
+        1 => new Digit<T, V>(value, values[0]),
+        2 => new Digit<T, V>(value, values[0], values[1]),
+        3 => new Digit<T, V>(value, values[0], values[1], values[2]),
         _ => throw new InvalidOperationException()
     };
 
     public Digit<T, V> Append(T value) => length switch {
-        1 => new(values[0], value),
-        2 => new(values[0], values[1], value),
-        3 => new(values[0], values[1], values[2], value),
+        1 => new Digit<T, V>(values[0], value),
+        2 => new Digit<T, V>(values[0], values[1], value),
+        3 => new Digit<T, V>(values[0], values[1], values[2], value),
         _ => throw new InvalidOperationException()
     };
 }

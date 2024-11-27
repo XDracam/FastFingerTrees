@@ -52,7 +52,7 @@ where T : IFTreeElement<V> where V : struct, IFTreeMeasure<V>
     ) : FTree<T, V>
     {
         private V _measure;
-        private bool _hasMeasure = false;
+        private bool _hasMeasure;
         
         public readonly Digit<T, V> Left = left;
         public readonly Digit<T, V> Right = right;
@@ -104,6 +104,7 @@ where T : IFTreeElement<V> where V : struct, IFTreeMeasure<V>
         EmptyT => new Single(toAdd),
         Single(var x) => new Deep(new Digit<T, V>(toAdd), new(FTree<Digit<T, V>, V>.EmptyT.Instance), new Digit<T, V>(x)),
         Deep({Values.Length: 4} l, var m, var sf) => 
+            // TODO: overload to eliminate closure allocation
             new Deep(new Digit<T, V>(toAdd, l[0]), new(() => m.Value.Prepend(new Digit<T, V>(l[1], l[2], l[3]))), sf),
         Deep(var pr, var m, var sf) => new Deep(pr.Prepend(toAdd), m, sf),
         _ => throw new InvalidOperationException()
@@ -113,6 +114,7 @@ where T : IFTreeElement<V> where V : struct, IFTreeMeasure<V>
         EmptyT => new Single(toAdd),
         Single(var x) => new Deep(new Digit<T, V>(x), new(FTree<Digit<T, V>, V>.EmptyT.Instance), new Digit<T, V>(toAdd)),
         Deep(var pr, var m, {Values.Length: 4} r) => 
+            // TODO: overload to eliminate closure allocation
             new Deep(pr, new(() => m.Value.Append(new Digit<T, V>(r[0], r[1], r[2]))), new Digit<T, V>(r[3], toAdd)),
         Deep(var pr, var m, var sf) => new Deep(pr, m, sf.Append(toAdd)),
         _ => throw new InvalidOperationException()
@@ -147,6 +149,7 @@ where T : IFTreeElement<V> where V : struct, IFTreeMeasure<V>
                 // Note: node needs 2 or 3 elements
                 return new Deep(
                     leftDigit, 
+                    // TODO: overload to eliminate closure allocation (then we might not even need the array)
                     new(() => FTree<Digit<T, V>, V>.createRangeOptimized(nodes<T, V>(arrForDigits))),
                     rightDigit
                 );

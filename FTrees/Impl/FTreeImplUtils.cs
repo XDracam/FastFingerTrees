@@ -29,6 +29,7 @@ internal static class FTreeImplUtils
             FTree<Digit<A, V>, V>.Single(var x) => 
                 new FTree<A, V>.Deep(x, new(FTree<Digit<A, V>, V>.Empty), sf),
             FTree<Digit<A, V>, V>.Deep(var pr2, var m2, var sf2) => 
+                // TODO: overload to eliminate closure allocation
                 new FTree<A, V>.Deep(pr2.Head, new(() => deepL(pr2.Tail, m2, sf2)), sf),
             _ => throw new InvalidOperationException()
         };
@@ -58,6 +59,7 @@ internal static class FTreeImplUtils
             FTree<Digit<A, V>, V>.Single(var x) => 
                 new FTree<A, V>.Deep(pr, new(FTree<Digit<A, V>, V>.Empty), x),
             FTree<Digit<A, V>, V>.Deep(var pr2, var m2, var sf2) => 
+                // TODO: overload to eliminate closure allocation
                 new FTree<A, V>.Deep(pr, new(() => deepR(pr2, m2, sf2.Init)), sf2.Last),
             _ => throw new InvalidOperationException()
         };
@@ -66,6 +68,7 @@ internal static class FTreeImplUtils
     // for Concat
     // PREPEND <|' -> reduceR
     // APPEND |>' -> reduceL
+    // TODO: first app3 without an empty digit
     internal static FTree<A, V> app3<A, V>(FTree<A, V> self, Digit<A, V> ts, FTree<A, V> other)
     where A : IFTreeElement<V> where V : struct, IFTreeMeasure<V> {
         return (self, other) switch {
@@ -76,6 +79,7 @@ internal static class FTreeImplUtils
             (FTree<A, V>.Deep(var pr1, var m1, var sf1), FTree<A, V>.Deep(var pr2, var m2, var sf2)) => 
                 new FTree<A, V>.Deep(
                     pr1,
+                    // TODO: overload to eliminate closure allocation
                     new(() => app3(
                         m1.Value,
                         new Digit<Digit<A, V>, V>(nodes<A, V>(concat(sf1.Values, ts.Values, pr2.Values))), 
@@ -159,17 +163,11 @@ internal static class FTreeImplUtils
     }
     
     // Value tuples aren't ref structs, so this approach is faster
-    internal readonly ref struct Triple<T>
+    internal readonly ref struct Triple<T>(ReadOnlySpan<T> item1, T item2, ReadOnlySpan<T> item3)
     {
-        public readonly ReadOnlySpan<T> Item1;
-        public readonly T Item2;
-        public readonly ReadOnlySpan<T> Item3;
-
-        public Triple(ReadOnlySpan<T> item1, T item2, ReadOnlySpan<T> item3) {
-            Item1 = item1;
-            Item2 = item2;
-            Item3 = item3;
-        }
+        public readonly ReadOnlySpan<T> Item1 = item1;
+        public readonly T Item2 = item2;
+        public readonly ReadOnlySpan<T> Item3 = item3;
 
         public void Deconstruct(out ReadOnlySpan<T> first, out T second, out ReadOnlySpan<T> third) {
             first = Item1;

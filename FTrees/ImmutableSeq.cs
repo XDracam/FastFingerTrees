@@ -35,6 +35,7 @@ public readonly struct ImmutableSeq<T> : IImmutableList<T>
     public int Count => backing.Measure.Value;
 
     private (FTree<SeqElem<T>, Size>, FTree<SeqElem<T>, Size>) splitAt(int idx) => 
+        // TODO: overload to eliminate closure allocation
         backing.Split(s => idx < s.Value);
         
     /// O(log n)
@@ -125,18 +126,21 @@ public readonly struct ImmutableSeq<T> : IImmutableList<T>
     /// O(log n)
     public ImmutableSeq<T> RemoveRange(int index, int count) {
         var (l, tail) = splitAt(index);
+        // TODO: overload to eliminate closure allocation
         var (_, r) = tail.Split(s => count < s.Value);
         return new(l.Concat(r));
     }
 
     /// O(log n)
     public ImmutableSeq<T> RemoveAt(int index) {
+        // TODO: overload to eliminate closure allocation
         var (l, _, r) = backing.SplitTree(s => index < s.Value, new());
         return new(l.Concat(r));
     }
 
     /// O(log n)
     public ImmutableSeq<T> SetItem(int index, T value) {
+        // TODO: overload to eliminate closure allocation
         var (l, _, r) = backing.SplitTree(s => index < s.Value, new());
         return new(l.Append(new(value)).Concat(r));
     }
@@ -179,6 +183,7 @@ public readonly struct ImmutableSeq<T> : IImmutableList<T>
     int IImmutableList<T>.IndexOf(T item, int index, int count, IEqualityComparer<T> equalityComparer) {
         equalityComparer ??= EqualityComparer<T>.Default;
         var idx = index;
+        // TODO: overload to eliminate closure allocation
         var target = backing.Split(s => idx < s.Value).Item2.Split(s => count < s.Value).Item1;
         using var it = target.GetEnumerator();
         while (it.MoveNext()) {
@@ -193,6 +198,7 @@ public readonly struct ImmutableSeq<T> : IImmutableList<T>
         // index is the END of the interval...
         equalityComparer ??= EqualityComparer<T>.Default;
         var startIdx = index - count + 1;
+        // TODO: overload to eliminate closure allocation
         var target = backing.Split(s => startIdx < s.Value).Item2.Split(s => count < s.Value).Item1;
         using var it = target.GetReverseEnumerator();
         while (it.MoveNext()) {
@@ -250,6 +256,7 @@ public readonly struct ImmutableSeq<T> : IImmutableList<T>
     #endregion
 }
     
+// TODO: can we just use an int as measure instead and provide the Add externally?
 internal readonly struct Size(int value) : IFTreeMeasure<Size>
 {
     public readonly int Value = value;
@@ -320,7 +327,7 @@ internal static class ImmutableSeqUtils
             for (var idx = 0; idx < digit.Length; ++idx) {
                 ref readonly var curr = ref digit[idx];
                 var newI = i + curr.Measure.Value;
-                if (newI.CompareTo(target) > 0) return ref curr;
+                if (newI > target) return ref curr;
                 i = newI;
             }
             return ref digit[^1];
