@@ -80,8 +80,7 @@ public readonly struct ImmutableOrderedSet<T> : IImmutableSet<T> where T : IComp
 
     /// O(log n)
     public ImmutableOrderedSet<T> Remove(T value) => Remove(value, out _);
-
-    // TODO: can this be optimized?
+    
     /// Amortized theta(m log (n/m)) time (asymptotically optimal)
     public ImmutableOrderedSet<T> Union(ImmutableOrderedSet<T> other) {
         return new(merge(backing, other.backing), Count + other.Count);

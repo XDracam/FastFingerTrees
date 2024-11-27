@@ -8,12 +8,17 @@ using DracTec.FTrees.Impl;
 
 namespace DracTec.FTrees;
 
+// ReSharper disable ParameterHidesMember // shadowing is a friend, not a foe
+
 public static class ImmutableSeq
 {
     public static ImmutableSeq<T> Create<T>(params ReadOnlySpan<T> values) => CreateRange(values.ToArray());
         
-    public static ImmutableSeq<T> CreateRange<T>(IEnumerable<T> values) =>
-        new(FTree<SeqElem<T>, Size>.CreateRange(values.Select(v => new SeqElem<T>(v)).ToArray()));
+    public static ImmutableSeq<T> CreateRange<T>(IEnumerable<T> values)
+    {
+        var valuesArr = values.Select(v => new SeqElem<T>(v)).ToArray();
+        return new(FTree<SeqElem<T>, Size>.CreateRange(valuesArr), valuesArr.Length);
+    }
 }
     
 /// <summary>
@@ -26,24 +31,30 @@ public static class ImmutableSeq
 [CollectionBuilder(typeof(ImmutableSeq), nameof(ImmutableSeq.Create))]
 public readonly struct ImmutableSeq<T> : IImmutableList<T>
 {
+    private readonly int count;
     private readonly FTree<SeqElem<T>, Size> backing;
-    internal ImmutableSeq(FTree<SeqElem<T>, Size> backing) => this.backing = backing;
+    
+    internal ImmutableSeq(FTree<SeqElem<T>, Size> backing, int count) {
+        this.backing = backing;
+        this.count = count;
+    }
 
-    public static ImmutableSeq<T> Empty => new(FTree<SeqElem<T>, Size>.Empty);
+    public static ImmutableSeq<T> Empty => new(FTree<SeqElem<T>, Size>.Empty, 0);
 
-    /// Amortized O(1)
-    public int Count => backing.Measure.Value;
+    // We could return the measure, but we don't want to
+    //  force evaluation of everything just for the count.
+    public int Count => count;
 
     private (FTree<SeqElem<T>, Size>, FTree<SeqElem<T>, Size>) splitAt(int idx) => 
         backing.Split(s => idx < s.Value);
         
-    /// O(log n)
+    // O(log n)
     public (ImmutableSeq<T> Before, ImmutableSeq<T> After) SplitAt(int idx) {
         var (l, r) = splitAt(idx);
-        return (new(l), new(r));
+        return (new(l, idx), new(r, count - idx));
     }
         
-    /// O(log n)
+    // O(log n)
     public ref readonly T this[int idx] {
         get {
             if (idx < 0) throw new IndexOutOfRangeException();
@@ -64,80 +75,81 @@ public readonly struct ImmutableSeq<T> : IImmutableList<T>
             var start = range.Start.GetOffset(Count);
             var end = range.End.GetOffset(Count);
             var (_, rem) = splitAt(start);
-            var res = new ImmutableSeq<T>(rem);
+            var newCount = count + start - end;
+            var res = new ImmutableSeq<T>(rem, newCount);
             if (end >= Count) return res;
-            return new(res.splitAt(end-start).Item1);
+            return new(res.splitAt(end-start).Item1, newCount);
         }
     }
-
-    // TODO: append and prepend could be faster (paper: "sometimes faster computing the size using subtraction")
         
-    /// Amortized O(1)
-    public ImmutableSeq<T> Prepend(T element) => new(backing.Prepend(new(element)));
+    // Amortized O(1)
+    public ImmutableSeq<T> Prepend(T element) => new(backing.Prepend(new(element)), count + 1);
         
-    /// Amortized O(1)
-    public ImmutableSeq<T> Append(T element) => new(backing.Append(new(element)));
+    // Amortized O(1)
+    public ImmutableSeq<T> Append(T element) => new(backing.Append(new(element)), count + 1);
 
-    /// O(1)
+    // O(1)
     public ref readonly T Head => ref backing.Head.Value;
 
-    /// O(1)
+    // O(1)
     public ref readonly T Last => ref backing.Last.Value;
         
-    /// Amortized O(1)
-    public ImmutableSeq<T> Tail => new(backing.Tail);
+    // Amortized O(1)
+    public ImmutableSeq<T> Tail => new(backing.Tail, count - 1);
         
-    /// Amortized O(1)
-    public ImmutableSeq<T> Init => new(backing.Init);
+    // Amortized O(1)
+    public ImmutableSeq<T> Init => new(backing.Init, count - 1);
         
-    public ImmutableSeq<T> Add(T value) => new(backing.Append(new(value)));
+    public ImmutableSeq<T> Add(T value) => new(backing.Append(new(value)), count + 1);
 
-    /// Amortized O(1)
-    public ImmutableSeq<T> Concat(ImmutableSeq<T> items) => new(backing.Concat(items.backing));
+    // Amortized O(1)
+    public ImmutableSeq<T> Concat(ImmutableSeq<T> items) => new(backing.Concat(items.backing), count + items.Count);
         
-    /// Amortized O(1) when items is another ImmutableSeq, else O(|items|)
+    // Amortized O(1) when items is another ImmutableSeq, else O(|items|)
     public ImmutableSeq<T> AddRange(IEnumerable<T> items) {
         if (items is ImmutableSeq<T> seq) 
-            return new(backing.Concat(seq.backing)); // O(1)
-            
-        var otherTree = FTree<SeqElem<T>, Size>.CreateRange(items.Select(x => new SeqElem<T>(x)).ToArray());
-        return new(backing.Concat(otherTree));
+            return new(backing.Concat(seq.backing), count + seq.count); // O(1)
+
+        var itemsArray = items.Select(x => new SeqElem<T>(x)).ToArray();
+        var otherTree = FTree<SeqElem<T>, Size>.CreateRange(itemsArray);
+        return new(backing.Concat(otherTree), count + itemsArray.Length);
     }
 
-    /// O(log n), or amortized O(1) if appending or prepending
+    // O(log n), or amortized O(1) if appending or prepending
     public ImmutableSeq<T> Insert(int index, T element) {
         if (index == 0) return Prepend(element);
         if (index == Count) return Append(element);
         var (l, r) = splitAt(index);
-        return new(l.Concat(r.Prepend(new(element))));
+        return new(l.Concat(r.Prepend(new(element))), 1);
     }
 
-    /// O(log n + |items|), or O(log n) if items is an <c>ImmutableSeq{T}</c>
+    // O(log n + |items|), or O(log n) if items is an <c>ImmutableSeq{T}</c>
     public ImmutableSeq<T> InsertRange(int index, IEnumerable<T> items) {
         var (l, r) = splitAt(index);
-        var middle = items is ImmutableSeq<T> seq 
-            ? seq.backing 
-            : FTree<SeqElem<T>, Size>.CreateRange(items.Select(i => new SeqElem<T>(i)).ToArray());
-        return new(l.Concat(middle).Concat(r));
+        if (items is ImmutableSeq<T> seq) 
+            return new(l.Concat(seq.backing).Concat(r), count + seq.count);
+        
+        var itemsArr = items.Select(i => new SeqElem<T>(i)).ToArray();
+        return new(l.Concat(FTree<SeqElem<T>, Size>.CreateRange(itemsArr)).Concat(r), count + itemsArr.Length);
     }
 
-    /// O(log n)
+    // O(log n)
     public ImmutableSeq<T> RemoveRange(int index, int count) {
         var (l, tail) = splitAt(index);
         var (_, r) = tail.Split(s => count < s.Value);
-        return new(l.Concat(r));
+        return new(l.Concat(r), this.count - count);
     }
 
-    /// O(log n)
+    // O(log n)
     public ImmutableSeq<T> RemoveAt(int index) {
         var (l, _, r) = backing.SplitTree(s => index < s.Value, new());
-        return new(l.Concat(r));
+        return new(l.Concat(r), count - 1);
     }
 
-    /// O(log n)
+    // O(log n)
     public ImmutableSeq<T> SetItem(int index, T value) {
         var (l, _, r) = backing.SplitTree(s => index < s.Value, new());
-        return new(l.Append(new(value)).Concat(r));
+        return new(l.Append(new(value)).Concat(r), count);
     }
 
     #region Enumerator
@@ -277,7 +289,9 @@ internal readonly struct SeqElem<T>(T value) : IFTreeElement<Size>
 
 internal static class ImmutableSeqUtils
 {
-
+    // TODO: if idx closer to end then use minus and go back for faster results
+    //   (and custom versions of SplitTree etc that do this as well)
+    
     // guaranteed to be O(logn)
     // like SplitTree, but doesn't generate unnecessary new trees
     // also should check for the first `i > target` and stop
