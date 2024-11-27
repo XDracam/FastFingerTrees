@@ -6,6 +6,8 @@ namespace DracTec.FTrees.Impl;
 // Moved out to reduce the strain on the JIT compiler.
 internal static class FTreeImplUtils 
 {
+    // ReSharper disable VariableHidesOuterVariable
+    
     internal static View<A, V> toViewL<A, V>(FTree<A, V> self) where A : IFTreeElement<V> where V : struct, IFTreeMeasure<V> {
         return self switch {
             FTree<A, V>.EmptyT => new View<A, V>(),
@@ -17,7 +19,7 @@ internal static class FTreeImplUtils
     
     internal static FTree<A, V> deepL<A, V>(
         ReadOnlySpan<A> pr, 
-        LazyThunk<FTree<Digit<A, V>, V>> m, 
+        ILazy<FTree<Digit<A, V>, V>> m, 
         Digit<A, V> sf
     ) where A : IFTreeElement<V> where V : struct, IFTreeMeasure<V> {
         if (pr.Length > 0) 
@@ -27,10 +29,9 @@ internal static class FTreeImplUtils
             FTree<Digit<A, V>, V>.EmptyT => 
                 FTree<A, V>.createRangeOptimized(sf.Values),
             FTree<Digit<A, V>, V>.Single(var x) => 
-                new FTree<A, V>.Deep(x, new(FTree<Digit<A, V>, V>.Empty), sf),
-            FTree<Digit<A, V>, V>.Deep(var pr2, var m2, var sf2) => 
-                // TODO: overload to eliminate closure allocation
-                new FTree<A, V>.Deep(pr2.Head, new(() => deepL(pr2.Tail, m2, sf2)), sf),
+                new FTree<A, V>.Deep(x, Lazy.From(FTree<Digit<A, V>, V>.Empty), sf),
+            FTree<Digit<A, V>, V>.Deep d => 
+                new FTree<A, V>.Deep(d.Left.Head, Lazy.From(d => deepL(d.Left.Tail, d.Spine, d.Right), d), sf),
             _ => throw new InvalidOperationException()
         };
     }
@@ -47,7 +48,7 @@ internal static class FTreeImplUtils
     
     internal static FTree<A, V> deepR<A, V>(
         Digit<A, V> pr,
-        LazyThunk<FTree<Digit<A, V>, V>> m, 
+        ILazy<FTree<Digit<A, V>, V>> m, 
         ReadOnlySpan<A> sf
     ) where A : IFTreeElement<V> where V : struct, IFTreeMeasure<V> {
         if (sf.Length > 0) 
@@ -57,10 +58,32 @@ internal static class FTreeImplUtils
             FTree<Digit<A, V>, V>.EmptyT => 
                 FTree<A, V>.createRangeOptimized(pr.Values),
             FTree<Digit<A, V>, V>.Single(var x) => 
-                new FTree<A, V>.Deep(pr, new(FTree<Digit<A, V>, V>.Empty), x),
-            FTree<Digit<A, V>, V>.Deep(var pr2, var m2, var sf2) => 
-                // TODO: overload to eliminate closure allocation
-                new FTree<A, V>.Deep(pr, new(() => deepR(pr2, m2, sf2.Init)), sf2.Last),
+                new FTree<A, V>.Deep(pr, Lazy.From(FTree<Digit<A, V>, V>.Empty), x),
+            FTree<Digit<A, V>, V>.Deep d => 
+                new FTree<A, V>.Deep(pr, Lazy.From(d => deepR(d.Left, d.Spine, d.Right.Init), d), d.Right.Last),
+            _ => throw new InvalidOperationException()
+        };
+    }
+    
+    internal static FTree<A, V> app2<A, V>(FTree<A, V> self, FTree<A, V> other)
+    where A : IFTreeElement<V> where V : struct, IFTreeMeasure<V> {
+        return (self, other) switch {
+            (FTree<A, V>.EmptyT, var xs) => xs,
+            (var xs, FTree<A, V>.EmptyT) => xs,
+            (FTree<A, V>.Single(var x), var xs) => xs.Prepend(x),
+            (var xs, FTree<A, V>.Single(var x)) => xs.Append(x),
+            (FTree<A, V>.Deep d1, FTree<A, V>.Deep d2) => 
+                new FTree<A, V>.Deep(
+                    d1.Left,
+                    Lazy.From((d1, d2) => app3(
+                        d1.Spine.Value,
+                        new Digit<Digit<A, V>, V>(
+                            // TODO: this allocates log n arrays - can we get rid of that?
+                            nodes<A, V>(concat(d1.Right.Values, ReadOnlySpan<A>.Empty, d2.Left.Values))), 
+                        d2.Spine.Value
+                    ), d1, d2),
+                    d2.Right
+                ),
             _ => throw new InvalidOperationException()
         };
     }
@@ -68,7 +91,6 @@ internal static class FTreeImplUtils
     // for Concat
     // PREPEND <|' -> reduceR
     // APPEND |>' -> reduceL
-    // TODO: first app3 without an empty digit
     internal static FTree<A, V> app3<A, V>(FTree<A, V> self, Digit<A, V> ts, FTree<A, V> other)
     where A : IFTreeElement<V> where V : struct, IFTreeMeasure<V> {
         return (self, other) switch {
@@ -76,16 +98,15 @@ internal static class FTreeImplUtils
             (var xs, FTree<A, V>.EmptyT) => appendDigit(ts, xs),
             (FTree<A, V>.Single(var x), var xs) => prependDigit(ts, xs).Prepend(x),
             (var xs, FTree<A, V>.Single(var x)) => appendDigit(ts, xs).Append(x),
-            (FTree<A, V>.Deep(var pr1, var m1, var sf1), FTree<A, V>.Deep(var pr2, var m2, var sf2)) => 
+            (FTree<A, V>.Deep d1, FTree<A, V>.Deep d2) => 
                 new FTree<A, V>.Deep(
-                    pr1,
-                    // TODO: overload to eliminate closure allocation
-                    new(() => app3(
-                        m1.Value,
-                        new Digit<Digit<A, V>, V>(nodes<A, V>(concat(sf1.Values, ts.Values, pr2.Values))), 
-                        m2.Value
-                    )),
-                    sf2
+                    d1.Left,
+                    Lazy.From((d1, d2, ts) => app3(
+                        d1.Spine.Value,
+                        new Digit<Digit<A, V>, V>(nodes<A, V>(concat(d1.Right.Values, ts.Values, d2.Left.Values))), 
+                        d2.Spine.Value
+                    ), d1, d2, ts),
+                    d2.Right
                 ),
             _ => throw new InvalidOperationException()
         };
@@ -101,23 +122,23 @@ internal static class FTreeImplUtils
                 tree = tree.Append(digit.Values[i]);
             return tree;
         }
-
-        static A[] concat(ReadOnlySpan<A> first, ReadOnlySpan<A> second, ReadOnlySpan<A> third) {
-            // compute everything only once!
-            var al = first.Length;
-            var bl = second.Length;
-            var cl = third.Length;
-            var abl = al + bl;
+    }
+    
+     private static A[] concat<A>(ReadOnlySpan<A> first, ReadOnlySpan<A> second, ReadOnlySpan<A> third) {
+        // compute everything only once!
+        var al = first.Length;
+        var bl = second.Length;
+        var cl = third.Length;
+        var abl = al + bl;
             
-            var res = new A[abl + cl];
-            var span = res.AsSpan();
+        var res = new A[abl + cl];
+        var span = res.AsSpan();
             
-            first.CopyTo(span[..al]);
-            second.CopyTo(span[al..abl]);
-            third.CopyTo(span[abl..]);
+        first.CopyTo(span[..al]);
+        second.CopyTo(span[al..abl]);
+        third.CopyTo(span[abl..]);
             
-            return res;
-        }
+        return res;
     }
     
     // optimized to avoid unnecessary allocations

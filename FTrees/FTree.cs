@@ -15,6 +15,8 @@ public interface IFTreeMeasure<TSelf> where TSelf : struct, IFTreeMeasure<TSelf>
 
 public interface IFTreeElement<V> where V : struct, IFTreeMeasure<V> { V Measure { get; } }
 
+// ReSharper disable VariableHidesOuterVariable
+
 /// <summary>
 /// A functional representation of persistent sequences supporting access to the ends in amortized constant time,
 ///  and concatenation and splitting in time logarithmic in the size of the smaller piece.
@@ -47,7 +49,7 @@ where T : IFTreeElement<V> where V : struct, IFTreeMeasure<V>
 
     internal sealed class Deep(
         Digit<T, V> left,
-        LazyThunk<FTree<Digit<T, V>, V>> spine,
+        ILazy<FTree<Digit<T, V>, V>> spine,
         Digit<T, V> right
     ) : FTree<T, V>
     {
@@ -56,11 +58,11 @@ where T : IFTreeElement<V> where V : struct, IFTreeMeasure<V>
         
         public readonly Digit<T, V> Left = left;
         public readonly Digit<T, V> Right = right;
-        public readonly LazyThunk<FTree<Digit<T, V>, V>> Spine = spine;
+        public readonly ILazy<FTree<Digit<T, V>, V>> Spine = spine;
 
         public void Deconstruct(
             out Digit<T, V> left,
-            out LazyThunk<FTree<Digit<T, V>, V>> outSpine,
+            out ILazy<FTree<Digit<T, V>, V>> outSpine,
             out Digit<T, V> right
         ) {
             left = Left;
@@ -102,20 +104,29 @@ where T : IFTreeElement<V> where V : struct, IFTreeMeasure<V>
     
     public FTree<T, V> Prepend(T toAdd) => this switch { // in paper: a <| this
         EmptyT => new Single(toAdd),
-        Single(var x) => new Deep(new Digit<T, V>(toAdd), new(FTree<Digit<T, V>, V>.EmptyT.Instance), new Digit<T, V>(x)),
+        Single(var x) => new Deep(
+            new Digit<T, V>(toAdd), 
+            Lazy.From(FTree<Digit<T, V>, V>.EmptyT.Instance), 
+            new Digit<T, V>(x)),
         Deep({Values.Length: 4} l, var m, var sf) => 
-            // TODO: overload to eliminate closure allocation
-            new Deep(new Digit<T, V>(toAdd, l[0]), new(() => m.Value.Prepend(new Digit<T, V>(l[1], l[2], l[3]))), sf),
+            new Deep(
+                new Digit<T, V>(toAdd, l[0]), 
+                Lazy.From((m, l) => m.Value.Prepend(new Digit<T, V>(l[1], l[2], l[3])), m, l), 
+                sf),
         Deep(var pr, var m, var sf) => new Deep(pr.Prepend(toAdd), m, sf),
         _ => throw new InvalidOperationException()
     };
     
     public FTree<T, V> Append(T toAdd) => this switch { // in paper: this |> a
         EmptyT => new Single(toAdd),
-        Single(var x) => new Deep(new Digit<T, V>(x), new(FTree<Digit<T, V>, V>.EmptyT.Instance), new Digit<T, V>(toAdd)),
+        Single(var x) => new Deep(
+            new Digit<T, V>(x), 
+            Lazy.From(FTree<Digit<T, V>, V>.EmptyT.Instance), 
+            new Digit<T, V>(toAdd)),
         Deep(var pr, var m, {Values.Length: 4} r) => 
-            // TODO: overload to eliminate closure allocation
-            new Deep(pr, new(() => m.Value.Append(new Digit<T, V>(r[0], r[1], r[2]))), new Digit<T, V>(r[3], toAdd)),
+            new Deep(pr, 
+                Lazy.From((m, r) => m.Value.Append(new Digit<T, V>(r[0], r[1], r[2])), m, r), 
+                new Digit<T, V>(r[3], toAdd)),
         Deep(var pr, var m, var sf) => new Deep(pr, m, sf.Append(toAdd)),
         _ => throw new InvalidOperationException()
     };
@@ -138,10 +149,11 @@ where T : IFTreeElement<V> where V : struct, IFTreeMeasure<V>
                 var firstDigitLength = length / 2;
                 return new Deep(
                     new Digit<T, V>(array[..firstDigitLength]), 
-                    new(FTree<Digit<T, V>, V>.EmptyT.Instance), 
+                    Lazy.From(FTree<Digit<T, V>, V>.EmptyT.Instance), 
                     new Digit<T, V>(array[firstDigitLength..])
                 );
             default:
+                // This case only happens in CreateRange
                 var leftDigit = new Digit<T, V>(array[..3]);
                 var rightDigit = new Digit<T, V>(array[^3..]);
 
@@ -149,8 +161,8 @@ where T : IFTreeElement<V> where V : struct, IFTreeMeasure<V>
                 // Note: node needs 2 or 3 elements
                 return new Deep(
                     leftDigit, 
-                    // TODO: overload to eliminate closure allocation (then we might not even need the array)
-                    new(() => FTree<Digit<T, V>, V>.createRangeOptimized(nodes<T, V>(arrForDigits))),
+                    // TODO: this allocates log n arrays - can we get rid of that?
+                    Lazy.From(arr => FTree<Digit<T, V>, V>.createRangeOptimized(nodes<T, V>(arr)), arrForDigits),
                     rightDigit
                 );
         }
@@ -179,7 +191,7 @@ where T : IFTreeElement<V> where V : struct, IFTreeMeasure<V>
     public FTree<T, V> Init => toViewR(this).Tail;
 
     // in paper: |><| (wtf)
-    public FTree<T, V> Concat(FTree<T, V> other) => app3(this, new Digit<T, V>(), other);
+    public FTree<T, V> Concat(FTree<T, V> other) => app2(this, other);
     
     // guaranteed to be O(logn)
     public (FTree<T, V>, T, FTree<T, V>) SplitTree(Func<V, bool> p, V i) {
@@ -196,7 +208,7 @@ where T : IFTreeElement<V> where V : struct, IFTreeMeasure<V>
                 if (p(vm)) {
                     var (ml, xs, mr) = m.Value.SplitTree(p, vpr);
                     var (l, x, r) = splitDigit(p, V.Add(vpr, ml.Measure), xs);
-                    return (deepR(pr, new(ml), l), x, deepL(r, new(mr), sf));
+                    return (deepR(pr, Lazy.From(ml), l), x, deepL(r, Lazy.From(mr), sf));
                 }
                 else {
                     var (l, x, r) = splitDigit(p, vm, sf);

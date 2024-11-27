@@ -35,7 +35,6 @@ public readonly struct ImmutableSeq<T> : IImmutableList<T>
     public int Count => backing.Measure.Value;
 
     private (FTree<SeqElem<T>, Size>, FTree<SeqElem<T>, Size>) splitAt(int idx) => 
-        // TODO: overload to eliminate closure allocation
         backing.Split(s => idx < s.Value);
         
     /// O(log n)
@@ -107,7 +106,6 @@ public readonly struct ImmutableSeq<T> : IImmutableList<T>
 
     /// O(log n), or amortized O(1) if appending or prepending
     public ImmutableSeq<T> Insert(int index, T element) {
-        // TODO: this is lower than ImmutableArrays...
         if (index == 0) return Prepend(element);
         if (index == Count) return Append(element);
         var (l, r) = splitAt(index);
@@ -126,21 +124,18 @@ public readonly struct ImmutableSeq<T> : IImmutableList<T>
     /// O(log n)
     public ImmutableSeq<T> RemoveRange(int index, int count) {
         var (l, tail) = splitAt(index);
-        // TODO: overload to eliminate closure allocation
         var (_, r) = tail.Split(s => count < s.Value);
         return new(l.Concat(r));
     }
 
     /// O(log n)
     public ImmutableSeq<T> RemoveAt(int index) {
-        // TODO: overload to eliminate closure allocation
         var (l, _, r) = backing.SplitTree(s => index < s.Value, new());
         return new(l.Concat(r));
     }
 
     /// O(log n)
     public ImmutableSeq<T> SetItem(int index, T value) {
-        // TODO: overload to eliminate closure allocation
         var (l, _, r) = backing.SplitTree(s => index < s.Value, new());
         return new(l.Append(new(value)).Concat(r));
     }
@@ -183,7 +178,6 @@ public readonly struct ImmutableSeq<T> : IImmutableList<T>
     int IImmutableList<T>.IndexOf(T item, int index, int count, IEqualityComparer<T> equalityComparer) {
         equalityComparer ??= EqualityComparer<T>.Default;
         var idx = index;
-        // TODO: overload to eliminate closure allocation
         var target = backing.Split(s => idx < s.Value).Item2.Split(s => count < s.Value).Item1;
         using var it = target.GetEnumerator();
         while (it.MoveNext()) {
@@ -198,7 +192,6 @@ public readonly struct ImmutableSeq<T> : IImmutableList<T>
         // index is the END of the interval...
         equalityComparer ??= EqualityComparer<T>.Default;
         var startIdx = index - count + 1;
-        // TODO: overload to eliminate closure allocation
         var target = backing.Split(s => startIdx < s.Value).Item2.Split(s => count < s.Value).Item1;
         using var it = target.GetReverseEnumerator();
         while (it.MoveNext()) {
