@@ -120,7 +120,7 @@ public readonly struct ImmutableSeq<T> : IImmutableList<T>
         if (index == 0) return Prepend(element);
         if (index == Count) return Append(element);
         var (l, r) = splitAt(index);
-        return new(l.Concat(r.Prepend(new(element))), 1);
+        return new(l.Concat(r.Prepend(new(element))), count + 1);
     }
 
     // O(log n + |items|), or O(log n) if items is an <c>ImmutableSeq{T}</c>
