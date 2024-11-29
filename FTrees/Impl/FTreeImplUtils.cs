@@ -8,7 +8,8 @@ internal static class FTreeImplUtils
 {
     // ReSharper disable VariableHidesOuterVariable
     
-    internal static View<A, V> toViewL<A, V>(FTree<A, V> self) where A : IFTreeElement<V> where V : struct, IFTreeMeasure<V> {
+    internal static View<A, V> toViewL<A, V>(FTree<A, V> self) 
+    where A : IFTreeElement<V> where V : struct, IFTreeMeasure<V> {
         return self switch {
             FTree<A, V>.EmptyT => new View<A, V>(),
             FTree<A, V>.Single(var x) => new View<A, V>(x, FTree<A, V>.EmptyT.Instance),
@@ -37,7 +38,8 @@ internal static class FTreeImplUtils
     }
     
     
-    internal static View<A, V> toViewR<A, V>(FTree<A, V> self) where A : IFTreeElement<V> where V : struct, IFTreeMeasure<V> {
+    internal static View<A, V> toViewR<A, V>(FTree<A, V> self) 
+    where A : IFTreeElement<V> where V : struct, IFTreeMeasure<V> {
         return self switch {
             FTree<A, V>.EmptyT => new View<A, V>(),
             FTree<A, V>.Single(var x) => new View<A, V>(x, FTree<A, V>.EmptyT.Instance),

@@ -47,6 +47,9 @@ public readonly struct ImmutableSeq<T> : IImmutableList<T>
 
     private (FTree<SeqElem<T>, Size>, FTree<SeqElem<T>, Size>) splitAt(int idx) => 
         backing.Split(s => idx < s.Value);
+    
+    private (ILazy<FTree<SeqElem<T>, Size>>, ILazy<FTree<SeqElem<T>, Size>>) splitAtLazy(int idx) => 
+        backing.SplitLazy(s => idx < s.Value);
         
     // O(log n)
     public (ImmutableSeq<T> Before, ImmutableSeq<T> After) SplitAt(int idx) {
@@ -74,11 +77,11 @@ public readonly struct ImmutableSeq<T> : IImmutableList<T>
         get {
             var start = range.Start.GetOffset(Count);
             var end = range.End.GetOffset(Count);
-            var (_, rem) = splitAt(start);
+            var (_, rem) = splitAtLazy(start);
             var newCount = count + start - end;
-            var res = new ImmutableSeq<T>(rem, newCount);
+            var res = new ImmutableSeq<T>(rem.Value, newCount);
             if (end >= Count) return res;
-            return new(res.splitAt(end-start).Item1, newCount);
+            return new(res.splitAtLazy(end-start).Item1.Value, newCount);
         }
     }
         
@@ -136,8 +139,8 @@ public readonly struct ImmutableSeq<T> : IImmutableList<T>
     // O(log n)
     public ImmutableSeq<T> RemoveRange(int index, int count) {
         var (l, tail) = splitAt(index);
-        var (_, r) = tail.Split(s => count < s.Value);
-        return new(l.Concat(r), this.count - count);
+        var (_, r) = tail.SplitLazy(s => count < s.Value);
+        return new(l.Concat(r.Value), this.count - count);
     }
 
     // O(log n)
@@ -190,7 +193,8 @@ public readonly struct ImmutableSeq<T> : IImmutableList<T>
     int IImmutableList<T>.IndexOf(T item, int index, int count, IEqualityComparer<T> equalityComparer) {
         equalityComparer ??= EqualityComparer<T>.Default;
         var idx = index;
-        var target = backing.Split(s => idx < s.Value).Item2.Split(s => count < s.Value).Item1;
+        var target = backing.SplitLazy(s => idx < s.Value).Item2.Value
+            .SplitLazy(s => count < s.Value).Item1.Value;
         using var it = target.GetEnumerator();
         while (it.MoveNext()) {
             if (equalityComparer.Equals(it.Current.Value, item)) 
@@ -204,7 +208,8 @@ public readonly struct ImmutableSeq<T> : IImmutableList<T>
         // index is the END of the interval...
         equalityComparer ??= EqualityComparer<T>.Default;
         var startIdx = index - count + 1;
-        var target = backing.Split(s => startIdx < s.Value).Item2.Split(s => count < s.Value).Item1;
+        var target = backing.SplitLazy(s => startIdx < s.Value).Item2.Value
+            .SplitLazy(s => count < s.Value).Item1.Value;
         using var it = target.GetReverseEnumerator();
         while (it.MoveNext()) {
             if (equalityComparer.Equals(it.Current.Value, item)) 

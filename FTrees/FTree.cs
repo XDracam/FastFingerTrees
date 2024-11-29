@@ -217,6 +217,44 @@ where T : IFTreeElement<V> where V : struct, IFTreeMeasure<V>
             default: throw new InvalidOperationException("Cannot split an empty FTree");
         }
     }
+    
+    // guaranteed to be O(logn)
+    public (ILazy<FTree<T, V>>, T, ILazy<FTree<T, V>>) SplitTreeLazy(Func<V, bool> p, V i) {
+        switch (this) {
+            case Single(var s): 
+                return (Lazy.From(Empty), s, Lazy.From(Empty));
+            case Deep(var pr, var m, var sf): 
+                // TODO: eliminate unnecessary .ToArray()?
+                var vpr = V.Add(i, pr.Measure);
+                if (p(vpr)) {
+                    var (l, x, r) = splitDigit(p, i, pr);
+                    // top level digits have up to 4 elements, no need for lazy alloc
+                    return (
+                        Lazy.From(l => createRangeOptimized(l), l.ToArray()), 
+                        x, 
+                        Lazy.From((r, m, sf) => deepL(r, m, sf), r.ToArray(), m, sf)
+                    );
+                }
+                var vm = V.Add(vpr, m.Value.Measure);
+                if (p(vm)) {
+                    var (ml, xs, mr) = m.Value.SplitTreeLazy(p, vpr);
+                    var (l, x, r) = splitDigit(p, V.Add(vpr, ml.Value.Measure), xs);
+                    return (
+                        Lazy.From((pr, ml, l) => deepR(pr, ml, l), pr, ml, l.ToArray()), 
+                        x, 
+                        Lazy.From((r, mr, sf) => deepL(r, mr, sf), r.ToArray(), mr, sf)
+                    );
+                } else {
+                    var (l, x, r) = splitDigit(p, vm, sf);
+                    return (
+                        Lazy.From((pr, m, l) => deepR(pr, m, l), pr, m, l.ToArray()), 
+                        x, 
+                        Lazy.From(r => createRangeOptimized(r), r.ToArray())
+                    );
+                }
+            default: throw new InvalidOperationException("Cannot split an empty FTree");
+        }
+    }
 
     public (FTree<T, V>, FTree<T, V>) Split(Func<V, bool> p) {
         if (this is EmptyT) return (Empty, Empty);
@@ -226,9 +264,18 @@ where T : IFTreeElement<V> where V : struct, IFTreeMeasure<V>
         }
         return (this, Empty);
     }
+    
+    public (ILazy<FTree<T, V>>, ILazy<FTree<T, V>>) SplitLazy(Func<V, bool> p) {
+        if (this is EmptyT) return (Lazy.From(Empty), Lazy.From(Empty));
+        if (p(Measure)) {
+            var (l, x, r) = SplitTreeLazy(p, new());
+            return (l, Lazy.From((r, x) => r.Value.Prepend(x), r, x));
+        }
+        return (Lazy.From(this), Lazy.From(Empty));
+    }
 
-    public FTree<T, V> TakeUntil(Func<V, bool> p) => Split(p).Item1;
-    public FTree<T, V> DropUntil(Func<V, bool> p) => Split(p).Item2;
+    public FTree<T, V> TakeUntil(Func<V, bool> p) => SplitLazy(p).Item1.Value;
+    public FTree<T, V> DropUntil(Func<V, bool> p) => SplitLazy(p).Item2.Value;
 
     IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
     

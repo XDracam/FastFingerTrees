@@ -2,7 +2,11 @@
 
 namespace DracTec.FTrees.Impl;
 
-internal static class Lazy
+/// <summary>
+/// Factory methods for <see cref="ILazy{T}"/> that
+///  produce lazy values that are faster but not thread-safe.
+/// </summary>
+public static class Lazy
 {
     public static ILazy<T> From<T>(T value) where T : class => 
         new LazyThunk<T>(value);
@@ -22,7 +26,11 @@ internal static class Lazy
         new LazyThunk<T, Arg1, Arg2, Arg3>(producer, arg1, arg2, arg3);
 }
 
-internal interface ILazy<out T> where T : class
+/// <summary>
+/// Like a <see cref="System.Lazy{T}"/> but 
+///  without the thread safety overhead shenanigans.
+/// </summary>
+public interface ILazy<out T> where T : class
 {
     T Value { get; }
 }
