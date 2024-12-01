@@ -6,6 +6,8 @@ namespace DracTec.FTrees;
 
 using static FTreeImplUtils;
 
+// ReSharper disable VariableHidesOuterVariable
+
 public abstract partial class FTree<T, V>
 {
     internal sealed class Deep(
@@ -14,6 +16,7 @@ public abstract partial class FTree<T, V>
         Digit<T, V> right
     ) : FTree<T, V>
     {
+        // inlined lazy to save an allocation
         private V _measure;
         private bool _hasMeasure;
         
@@ -25,19 +28,19 @@ public abstract partial class FTree<T, V>
 
         public void Deconstruct(
             out Digit<T, V> left,
-            out ILazy<FTree<Digit<T, V>, V>> outSpine,
+            out ILazy<FTree<Digit<T, V>, V>> spine,
             out Digit<T, V> right
         ) {
             left = Left;
-            outSpine = SpineLazy;
+            spine = SpineLazy;
             right = Right;
         }
 
         public override V Measure => _hasMeasure ? _measure 
             : ((_measure, _hasMeasure) = (V.Add(Left.Measure, Spine.Measure, Right.Measure), true))._measure;
 
-        internal override View<T, V> toViewL() => new(Left.Head, deepL(Left.Tail, Spine, Right));
-        internal override View<T, V> toViewR() => new(Right.Last, deepR(Left, Spine, Right.Init));
+        internal override View<T, V> toViewL() => new(Left.Head, deepL(Left.Tail, SpineLazy, Right));
+        internal override View<T, V> toViewR() => new(Right.Last, deepR(Left, SpineLazy, Right.Init));
 
         public override TRes ReduceRight<TRes>(Func<T, TRes, TRes> reduceOp, TRes other) => 
             Left.ReduceRight(
@@ -85,17 +88,18 @@ public abstract partial class FTree<T, V>
             var vpr = V.Add(i, Left.Measure);
             if (p(vpr)) {
                 var (l, x, r) = splitDigit(p, i, Left);
-                return (createRangeOptimized(l), x, deepL(r, Spine, Right));
+                return (createRangeOptimized(l), x, deepL(r, SpineLazy, Right));
             }
-            var vm = V.Add(vpr, Spine.Measure);
+            var spine = Spine;
+            var vm = V.Add(vpr, spine.Measure);
             if (p(vm)) {
-                var (ml, xs, mr) = Spine.SplitTree(p, vpr);
+                var (ml, xs, mr) = spine.SplitTree(p, vpr);
                 var (l, x, r) = splitDigit(p, V.Add(vpr, ml.Measure), xs);
                 return (deepR(Left, ml, l), x, deepL(r, mr, Right));
             }
             else {
                 var (l, x, r) = splitDigit(p, vm, Right);
-                return (deepR(Left, Spine, l), x, createRangeOptimized(r));
+                return (deepR(Left, spine, l), x, createRangeOptimized(r));
             }
         }
 
@@ -108,7 +112,7 @@ public abstract partial class FTree<T, V>
                 return (
                     Lazy.From(l => createRangeOptimized(l), l.ToArray()), 
                     x, 
-                    Lazy.From((r, m, sf) => deepL(r, m, sf), r.ToArray(), Spine, Right)
+                    Lazy.From((r, m, sf) => deepL(r, m, sf), r.ToArray(), SpineLazy, Right)
                 );
             }
             var spine = Spine;
@@ -117,14 +121,14 @@ public abstract partial class FTree<T, V>
                 var (ml, xs, mr) = spine.SplitTreeLazy(p, vpr);
                 var (l, x, r) = splitDigit(p, V.Add(vpr, ml.Value.Measure), xs);
                 return (
-                    Lazy.From((pr, ml, l) => deepR(pr, ml.Value, l), Left, ml, l.ToArray()), 
+                    Lazy.From((pr, ml, l) => deepR(pr, ml, l), Left, ml, l.ToArray()), 
                     x, 
-                    Lazy.From((r, mr, sf) => deepL(r, mr.Value, sf), r.ToArray(), mr, Right)
+                    Lazy.From((r, mr, sf) => deepL(r, mr, sf), r.ToArray(), mr, Right)
                 );
             } else {
                 var (l, x, r) = splitDigit(p, vm, Right);
                 return (
-                    Lazy.From((pr, m, l) => deepR(pr, m, l), Left, Spine, l.ToArray()), 
+                    Lazy.From((pr, m, l) => deepR(pr, m, l), Left, spine, l.ToArray()), 
                     x, 
                     Lazy.From(r => createRangeOptimized(r), r.ToArray())
                 );

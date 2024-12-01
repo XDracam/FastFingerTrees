@@ -2,11 +2,13 @@
 
 namespace DracTec.FTrees.Impl;
 
+// ReSharper disable VariableHidesOuterVariable
+
 // Utils that depend on different generics than the FTree itself.
 // Moved out to reduce the strain on the JIT compiler.
 internal static class FTreeImplUtils 
 {
-    // ReSharper disable VariableHidesOuterVariable
+    // two versions of deepL and deepR because sometimes we already had to evaluate the spine and sometimes we didn't
     
     internal static FTree<A, V> deepL<A, V>(
         ReadOnlySpan<A> pr, 
@@ -22,7 +24,26 @@ internal static class FTreeImplUtils
             FTree<Digit<A, V>, V>.Single(var x) => 
                 new FTree<A, V>.Deep(x, FTree<Digit<A, V>, V>.EmptyT.LazyInstance, sf),
             FTree<Digit<A, V>, V>.Deep d => 
-                new FTree<A, V>.Deep(d.Left.Head, Lazy.From(d => deepL(d.Left.Tail, d.Spine, d.Right), d), sf),
+                new FTree<A, V>.Deep(d.Left.Head, Lazy.From(d => deepL(d.Left.Tail, d.SpineLazy, d.Right), d), sf),
+            _ => throw new InvalidOperationException()
+        };
+    }
+    
+    internal static FTree<A, V> deepL<A, V>(
+        ReadOnlySpan<A> pr, 
+        ILazy<FTree<Digit<A, V>, V>> m, 
+        Digit<A, V> sf
+    ) where A : IFTreeElement<V> where V : struct, IFTreeMeasure<V> {
+        if (pr.Length > 0) 
+            return new FTree<A, V>.Deep(new(pr), m, sf);
+        
+        return m.Value switch {
+            FTree<Digit<A, V>, V>.EmptyT => 
+                FTree<A, V>.createRangeOptimized(sf.Values),
+            FTree<Digit<A, V>, V>.Single(var x) => 
+                new FTree<A, V>.Deep(x, FTree<Digit<A, V>, V>.EmptyT.LazyInstance, sf),
+            FTree<Digit<A, V>, V>.Deep d => 
+                new FTree<A, V>.Deep(d.Left.Head, Lazy.From(d => deepL(d.Left.Tail, d.SpineLazy, d.Right), d), sf),
             _ => throw new InvalidOperationException()
         };
     }
@@ -41,7 +62,26 @@ internal static class FTreeImplUtils
             FTree<Digit<A, V>, V>.Single(var x) => 
                 new FTree<A, V>.Deep(pr, FTree<Digit<A, V>, V>.EmptyT.LazyInstance, x),
             FTree<Digit<A, V>, V>.Deep d => 
-                new FTree<A, V>.Deep(pr, Lazy.From(d => deepR(d.Left, d.Spine, d.Right.Init), d), d.Right.Last),
+                new FTree<A, V>.Deep(pr, Lazy.From(d => deepR(d.Left, d.SpineLazy, d.Right.Init), d), d.Right.Last),
+            _ => throw new InvalidOperationException()
+        };
+    }
+    
+    internal static FTree<A, V> deepR<A, V>(
+        Digit<A, V> pr,
+        ILazy<FTree<Digit<A, V>, V>> m, 
+        ReadOnlySpan<A> sf
+    ) where A : IFTreeElement<V> where V : struct, IFTreeMeasure<V> {
+        if (sf.Length > 0) 
+            return new FTree<A, V>.Deep(pr, m, new(sf));
+        
+        return m.Value switch {
+            FTree<Digit<A, V>, V>.EmptyT => 
+                FTree<A, V>.createRangeOptimized(pr.Values),
+            FTree<Digit<A, V>, V>.Single(var x) => 
+                new FTree<A, V>.Deep(pr, FTree<Digit<A, V>, V>.EmptyT.LazyInstance, x),
+            FTree<Digit<A, V>, V>.Deep d => 
+                new FTree<A, V>.Deep(pr, Lazy.From(d => deepR(d.Left, d.SpineLazy, d.Right.Init), d), d.Right.Last),
             _ => throw new InvalidOperationException()
         };
     }
