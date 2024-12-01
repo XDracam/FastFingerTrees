@@ -12,7 +12,7 @@ public class Contains
         // 1000,
         // 10000,
         // 30000
-        Constants.ParamsSize
+        _Utils.ParamsSize
     )]
     public int Count;
 
@@ -32,24 +32,24 @@ public class Contains
     [Benchmark]
     public void ImmutableOrderedSetContains() {
         foreach (var i in testArray)
-            _ = testOrderedSet.Contains(i);
+            _Utils.Use(testOrderedSet.Contains(i));
     }
 
     [Benchmark]
     public void ImmutableHashSetContains() {
         foreach (var i in testArray)
-            _ = testHashSet.Contains(i);
+            _Utils.Use(testHashSet.Contains(i));
     }
         
     [Benchmark]
     public void ImmutableSortedSetContains() {
         foreach (var i in testArray)
-            _ = testSortedSet.Contains(i);
+            _Utils.Use(testSortedSet.Contains(i));
     }
         
     [Benchmark]
     public void ImmutableArrayContains() {
         foreach (var i in testArray)
-            _ = testArray.Contains(i);
+            _Utils.Use(testArray.Contains(i));
     }
 }

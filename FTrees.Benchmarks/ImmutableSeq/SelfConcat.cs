@@ -17,7 +17,7 @@ public class SelfConcat {
         // 1000,
         // 10000,
         // 30000
-        Constants.ParamsSize
+        _Utils.ParamsSize
     )]
     public int Count;
 
@@ -26,30 +26,29 @@ public class SelfConcat {
     {
         var range = Enumerable.Range(0, Count).ToArray();
         list = new List<int>(range);
-        immutableArray = ImmutableArray.CreateRange(range);
-        immutableList = ImmutableList.CreateRange(range);
-        immutableSeq = FTrees.ImmutableSeq.CreateRange(range);
-        
+        immutableArray = [..range];
+        immutableList = [..range];
+        immutableSeq = [..range];
     }
         
     [Benchmark]
     public void ListConcat() {
-        _ = list.Concat(list).ToList(); // "immutable concat"
+        _Utils.Use(list.Concat(list).ToList()); // "immutable concat"
     }
         
     [Benchmark]
     public void ImmutableArrayConcat() {
-        _ = immutableArray.AddRange(immutableArray);
+        _Utils.Use(immutableArray.AddRange(immutableArray));
     }
         
     [Benchmark]
     public void ImmutableListConcat() {
-        _ = immutableList.AddRange(immutableList);
+        _Utils.Use(immutableList.AddRange(immutableList));
     }
         
     [Benchmark]
     public void ImmutableSeqConcat()
     {
-        _ = immutableSeq.AddRange(immutableSeq);
+        _Utils.Use(immutableSeq.AddRange(immutableSeq));
     }
 }

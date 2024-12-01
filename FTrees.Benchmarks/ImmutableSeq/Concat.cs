@@ -17,7 +17,7 @@ public class Concat {
         // 1000,
         // 10000,
         // 30000
-        Constants.ParamsSize
+        _Utils.ParamsSize
     )]
     public int Count;
 
@@ -34,22 +34,21 @@ public class Concat {
         
     [Benchmark]
     public void ListConcat() {
-        _ = list.Concat(immutableArray).ToList(); // "immutable concat"
+        _Utils.Use(list.Concat(immutableArray).ToList()); // "immutable concat"
     }
         
     [Benchmark]
     public void ImmutableArrayConcat() {
-        _ = immutableArray.AddRange(immutableArray);
+        _Utils.Use(immutableArray.AddRange(immutableArray));
     }
         
     [Benchmark]
     public void ImmutableListConcat() {
-        _ = immutableList.AddRange(immutableArray);
+        _Utils.Use(immutableList.AddRange(immutableArray));
     }
         
     [Benchmark]
-    public void ImmutableSeqConcat()
-    {
-        _ = immutableSeq.AddRange(immutableArray);
+    public void ImmutableSeqConcat() {
+        _Utils.Use(immutableSeq.AddRange(immutableArray));
     }
 }

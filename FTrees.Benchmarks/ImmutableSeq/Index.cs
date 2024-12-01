@@ -16,7 +16,7 @@ public class Index {
         // 1000,
         // 10000,
         // 30000
-        Constants.ParamsSize
+        _Utils.ParamsSize
     )]
     public int Count;
 
@@ -33,8 +33,8 @@ public class Index {
     [Benchmark]
     public void ListIndex() {
         for (var i = 0; i < Count; ++i) {
-            _ = list[i];
-            _ = list[Count - i - 1];
+            _Utils.Use(list[i]);
+            _Utils.Use(list[Count - i - 1]);
         }
     }
         
@@ -42,8 +42,8 @@ public class Index {
     public void ImmutableArrayIndex()
     {
         for (var i = 0; i < Count; ++i) {
-            _ = immutableArray[i];
-            _ = immutableArray[Count - i - 1];
+            _Utils.Use(immutableArray[i]);
+            _Utils.Use(immutableArray[Count - i - 1]);
         }
     }
         
@@ -51,8 +51,8 @@ public class Index {
     public void ImmutableListIndex()
     {
         for (var i = 0; i < Count; ++i) {
-            _ = immutableList[i];
-            _ = immutableList[Count - i - 1];
+            _Utils.Use(immutableList[i]);
+            _Utils.Use(immutableList[Count - i - 1]);
         }
     }
         
@@ -60,8 +60,8 @@ public class Index {
     public void ImmutableSeqIndex()
     {
         for (var i = 0; i < Count; ++i) {
-            _ = immutableSeq[i];
-            _ = immutableSeq[Count - i - 1];
+            _Utils.Use(immutableSeq[i]);
+            _Utils.Use(immutableSeq[Count - i - 1]);
         }
     }
 }

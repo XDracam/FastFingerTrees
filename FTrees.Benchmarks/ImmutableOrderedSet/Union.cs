@@ -12,7 +12,7 @@ public class Union {
         // 1000,
         // 10000,
         // 30000
-        Constants.ParamsSize
+        _Utils.ParamsSize
     )]
     public int Count;
 
@@ -45,21 +45,21 @@ public class Union {
 
     [Benchmark]
     public void ImmutableOrderedSetMerge() {
-        var x = testOrderedSet1.Union(testOrderedSet2);
+        _Utils.Use(testOrderedSet1.Union(testOrderedSet2));
     }
 
     [Benchmark]
     public void ImmutableHashSetMerge() {
-        _ = testHashSet1.Union(testHashSet2);
+        _Utils.Use(testHashSet1.Union(testHashSet2));
     }
         
     [Benchmark]
     public void ImmutableSortedSetMerge() {
-        _ = testSortedSet1.Union(testSortedSet2);
+        _Utils.Use(testSortedSet1.Union(testSortedSet2));
     }
         
     [Benchmark]
     public void ImmutableArrayMerge() {
-        _ = testArray1.AddRange(testArray2);
+        _Utils.Use(testArray1.AddRange(testArray2));
     }
 }

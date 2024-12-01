@@ -11,7 +11,7 @@ public class InsertMiddle {
         // 1000,
         // 10000,
         // 30000
-        Constants.ParamsSize
+        _Utils.ParamsSize
     )]
     public int Count;
 
@@ -23,6 +23,7 @@ public class InsertMiddle {
         var list = new List<int>();
         for (var i = 0; i < Count; ++i)
             list.Insert(i / 2, i);
+        _Utils.Use(list);
     }
         
     [Benchmark]
@@ -31,6 +32,7 @@ public class InsertMiddle {
         var list = ImmutableArray<int>.Empty;
         for (var i = 0; i < Count; ++i)
             list = list.Insert(i / 2, i);
+        _Utils.Use(list);
     }
         
     [Benchmark]
@@ -39,6 +41,7 @@ public class InsertMiddle {
         var list = ImmutableList<int>.Empty;
         for (var i = 0; i < Count; ++i)
             list = list.Insert(i / 2, i);
+        _Utils.Use(list);
     }
         
     [Benchmark]
@@ -47,5 +50,6 @@ public class InsertMiddle {
         var list = ImmutableSeq<int>.Empty;
         for (var i = 0; i < Count; ++i)
             list = list.Insert(i / 2, i);
+        _Utils.Use(list);
     }
 }

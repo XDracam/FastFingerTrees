@@ -13,7 +13,7 @@ public class CreateRange {
         // 1000,
         // 10000,
         // 30000
-        Constants.ParamsSize
+        _Utils.ParamsSize
     )]
     public int Count;
 
@@ -29,23 +29,27 @@ public class CreateRange {
     public void ListCreateRange()
     {
         var list = new List<int>(testData);
+        _Utils.Use(list);
     }
         
     [Benchmark]
     public void ImmutableArrayCreateRange()
     {
         var list = ImmutableArray.CreateRange(testData);
+        _Utils.Use(list);
     }
         
     [Benchmark]
     public void ImmutableListCreateRange()
     {
         var list = ImmutableList.CreateRange(testData);
+        _Utils.Use(list);
     }
         
     [Benchmark]
     public void ImmutableSeqCreateRange()
     {
         var list = FTrees.ImmutableSeq.CreateRange(testData);
+        _Utils.Use(list);
     }
 }

@@ -17,7 +17,7 @@ public class Enumerate {
         // 1000,
         // 10000,
         // 30000
-        Constants.ParamsSize
+        _Utils.ParamsSize
     )]
     public int Count;
 
@@ -35,24 +35,24 @@ public class Enumerate {
     [Benchmark]
     public void ListEnumerate()
     {
-        foreach (var item in list) { }
+        foreach (var item in list) { _Utils.Use(item); }
     }
         
     [Benchmark]
     public void ImmutableArrayEnumerate()
     {
-        foreach (var item in immutableArray) { }
+        foreach (var item in immutableArray) { _Utils.Use(item); }
     }
         
     [Benchmark]
     public void ImmutableListEnumerate()
     {
-        foreach (var item in immutableList) { }
+        foreach (var item in immutableList) { _Utils.Use(item); }
     }
         
     [Benchmark]
     public void ImmutableSeqEnumerate()
     {
-        foreach (var item in immutableSeq) { }
+        foreach (var item in immutableSeq) { _Utils.Use(item); }
     }
 }

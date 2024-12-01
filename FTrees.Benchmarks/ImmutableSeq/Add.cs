@@ -11,7 +11,7 @@ public class Add {
         // 1000,
         // 10000,
         // 30000
-        Constants.ParamsSize
+        _Utils.ParamsSize
     )]
     public int Count;
 
@@ -23,6 +23,7 @@ public class Add {
         var list = new List<int>();
         for (var i = 0; i < Count; ++i)
             list.Add(i);
+        _Utils.Use(list);
     }
         
     [Benchmark]
@@ -31,6 +32,7 @@ public class Add {
         var list = ImmutableArray<int>.Empty;
         for (var i = 0; i < Count; ++i)
             list = list.Add(i);
+        _Utils.Use(list);
     }
         
     [Benchmark]
@@ -39,6 +41,7 @@ public class Add {
         var list = ImmutableList<int>.Empty;
         for (var i = 0; i < Count; ++i)
             list = list.Add(i);
+        _Utils.Use(list);
     }
         
     [Benchmark]
@@ -47,5 +50,6 @@ public class Add {
         var list = ImmutableSeq<int>.Empty;
         for (var i = 0; i < Count; ++i)
             list = list.Add(i);
+        _Utils.Use(list);
     }
 }
