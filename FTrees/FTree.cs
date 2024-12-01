@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Linq;
 using DracTec.FTrees.Impl;
 
 namespace DracTec.FTrees;
@@ -12,7 +11,6 @@ public interface IFTreeMeasure<TSelf> where TSelf : struct, IFTreeMeasure<TSelf>
 {
     static abstract TSelf Add(in TSelf a, in TSelf b);
     static abstract TSelf Add(in TSelf a, in TSelf b, in TSelf c);
-    static abstract TSelf Add(ReadOnlySpan<TSelf> values); // no overhead compared to Add(a, b) and overload
     static abstract TSelf Add<T>(ReadOnlySpan<T> values) where T : IFTreeElement<TSelf>; // for digits
 }
 

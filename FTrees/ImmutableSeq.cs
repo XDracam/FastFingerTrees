@@ -9,6 +9,7 @@ using DracTec.FTrees.Impl;
 namespace DracTec.FTrees;
 
 // ReSharper disable ParameterHidesMember // shadowing is a friend, not a foe
+// ReSharper disable VariableHidesOuterVariable
 
 public static class ImmutableSeq
 {
@@ -274,13 +275,6 @@ internal readonly struct Size(int value) : IFTreeMeasure<Size>
     public static Size Add(in Size a, in Size b) => new(a.Value + b.Value);
 
     public static Size Add(in Size a, in Size b, in Size c) => new(a.Value + b.Value + c.Value);
-
-    public static Size Add(params ReadOnlySpan<Size> values) {
-        var sum = 0;
-        for (var i = 0; i < values.Length; ++i) 
-            sum += values[i].Value;
-        return new(sum);
-    }
 
     public static Size Add<T>(ReadOnlySpan<T> values) where T : IFTreeElement<Size> {
         var sum = 0;

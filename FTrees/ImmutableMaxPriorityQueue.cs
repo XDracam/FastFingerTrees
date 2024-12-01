@@ -83,26 +83,6 @@ internal readonly struct Prio<P>(P value) : IFTreeMeasure<Prio<P>>, IComparable<
 
     public static Prio<P> Add(in Prio<P> a, in Prio<P> b, in Prio<P> c) => Add(a, Add(b, c));
 
-    public static Prio<P> Add(ReadOnlySpan<Prio<P>> values) {
-        Prio<P> result = default;
-        var i = 0;
-        // step 1: find first result that has value
-        for (; i < values.Length; ++i) {
-            ref readonly var curr = ref values[i];
-            if (curr.HasValue) {
-                result = curr;
-                break;
-            }
-        }
-        // step 2: find maximum value
-        for (; i < values.Length; ++i) {
-            ref readonly var curr = ref values[i];
-            if (curr.CompareTo(result) >= 0)
-                result = curr;
-        }
-        return result;
-    }
-
     public static Prio<P> Add<T>(ReadOnlySpan<T> values) where T : IFTreeElement<Prio<P>> {
         Prio<P> result = default;
         var i = 0;
