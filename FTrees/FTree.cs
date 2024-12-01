@@ -9,7 +9,9 @@ using static FTreeImplUtils;
 
 public interface IFTreeMeasure<TSelf> where TSelf : struct, IFTreeMeasure<TSelf>
 {
-    static abstract TSelf Add(params ReadOnlySpan<TSelf> values); // no overhead compared to Add(a, b) and overload
+    static abstract TSelf Add(in TSelf a, in TSelf b);
+    static abstract TSelf Add(in TSelf a, in TSelf b, in TSelf c);
+    static abstract TSelf Add(ReadOnlySpan<TSelf> values); // no overhead compared to Add(a, b) and overload
     static abstract TSelf Add<T>(ReadOnlySpan<T> values) where T : IFTreeElement<TSelf>; // for digits
 }
 
@@ -108,7 +110,7 @@ where T : IFTreeElement<V> where V : struct, IFTreeMeasure<V>
             new Digit<T, V>(toAdd), 
             Lazy.From(FTree<Digit<T, V>, V>.EmptyT.Instance), 
             new Digit<T, V>(x)),
-        Deep({Values.Length: 4} l, var m, var sf) => 
+        Deep({Length: 4} l, var m, var sf) => 
             new Deep(
                 new Digit<T, V>(toAdd, l[0]), 
                 Lazy.From((m, l) => m.Value.Prepend(new Digit<T, V>(l[1], l[2], l[3])), m, l), 
@@ -123,7 +125,7 @@ where T : IFTreeElement<V> where V : struct, IFTreeMeasure<V>
             new Digit<T, V>(x), 
             Lazy.From(FTree<Digit<T, V>, V>.EmptyT.Instance), 
             new Digit<T, V>(toAdd)),
-        Deep(var pr, var m, {Values.Length: 4} r) => 
+        Deep(var pr, var m, {Length: 4} r) => 
             new Deep(pr, 
                 Lazy.From((m, r) => m.Value.Append(new Digit<T, V>(r[0], r[1], r[2])), m, r), 
                 new Digit<T, V>(r[3], toAdd)),
@@ -298,16 +300,16 @@ where T : IFTreeElement<V> where V : struct, IFTreeMeasure<V>
         if (this is EmptyT) yield break;
         else if (this is Single(var x)) yield return x;
         else if (this is Deep(var pr, var m, var sf)) {
-            for (var i = sf.Values.Length - 1; i >= 0; --i) 
-                yield return sf.Values[i];
+            for (var i = sf.Length - 1; i >= 0; --i) 
+                yield return sf[i];
             var it = m.Value.GetReverseEnumerator();
             while (it.MoveNext()) {
                 var node = it.Current;
                 foreach (var nodeElem in node!) 
                     yield return nodeElem;
             }
-            for (var i = pr.Values.Length - 1; i >= 0; --i) 
-                yield return pr.Values[i];
+            for (var i = pr.Length - 1; i >= 0; --i) 
+                yield return pr[i];
         }
     }
 }

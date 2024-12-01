@@ -99,7 +99,13 @@ internal readonly struct KeyPrio<P>(Key<P> key, Prio<P> prio)
 
     public bool AtLeast(P k) => new Prio<P>(k).CompareTo(Prio) <= 0;
     public bool Greater(P k) => Key.CompareTo(new(k)) > 0;
-        
+
+    public static KeyPrio<P> Add(in KeyPrio<P> a, in KeyPrio<P> b) => 
+        new(Key<P>.Add(a.Key, b.Key), Prio<P>.Add(a.Prio, b.Prio));
+
+    public static KeyPrio<P> Add(in KeyPrio<P> a, in KeyPrio<P> b, in KeyPrio<P> c) =>
+        new(Key<P>.Add(a.Key, b.Key, c.Key), Prio<P>.Add(a.Prio, b.Prio, c.Prio));
+
     public static KeyPrio<P> Add(params ReadOnlySpan<KeyPrio<P>> values) {
         var key = Key<P>.Add(values);
         var prio = Prio<P>.Add(values);

@@ -266,10 +266,14 @@ public readonly struct ImmutableSeq<T> : IImmutableList<T>
     #endregion
 }
     
-// TODO: can we just use an int as measure instead and provide the Add externally?
+// Note: I tried separating Ops from the measure type, and it changed absolutely nothing
 internal readonly struct Size(int value) : IFTreeMeasure<Size>
 {
     public readonly int Value = value;
+
+    public static Size Add(in Size a, in Size b) => new(a.Value + b.Value);
+
+    public static Size Add(in Size a, in Size b, in Size c) => new(a.Value + b.Value + c.Value);
 
     public static Size Add(params ReadOnlySpan<Size> values) {
         var sum = 0;
@@ -318,31 +322,32 @@ internal static class ImmutableSeqUtils
         if (tree is FTree<T, Size>.Deep(var pr, var m, var sf)) {
             var vpr = i + pr.Measure.Value;
             if (vpr > target) 
-                return ref lookupDigit(target, i, pr.Values);
+                return ref lookupDigit(target, i, pr);
 
             i = vpr;
             var mValue = m.Value;
             var vm = vpr + mValue.Measure.Value;
             if (vm > target) {
                 var xs = lookupTree(mValue, target, i, out i);
-                return ref lookupDigit(target, i, xs.Values);
+                return ref lookupDigit(target, i, xs);
             }
 
             i = vm;
-            return ref lookupDigit(target, i, sf.Values);
+            return ref lookupDigit(target, i, sf);
         }
         throw new InvalidOperationException();
             
-        static ref readonly T lookupDigit(int target, int i, ReadOnlySpan<T> digit) {
-            if (digit.Length == 1)
+        static ref readonly T lookupDigit(int target, int i, Digit<T, Size> digit) {
+            var length = digit.Length;
+            if (length == 1)
                 return ref digit[0];
-            for (var idx = 0; idx < digit.Length; ++idx) {
+            for (var idx = 0; idx < length; ++idx) {
                 ref readonly var curr = ref digit[idx];
                 var newI = i + curr.Measure.Value;
                 if (newI > target) return ref curr;
                 i = newI;
             }
-            return ref digit[^1];
+            return ref digit[length - 1];
         }
     }
     

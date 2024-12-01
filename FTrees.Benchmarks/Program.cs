@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Diagnostics;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using BenchmarkDotNet.Configs;
 using BenchmarkDotNet.Running;
 
@@ -17,7 +18,7 @@ public static class Program {
 
         // var sw = Stopwatch.StartNew();
         // var count = 100000;
-        
+        //
         // var range = Enumerable.Range(0, count);
         // var immutableSeq = ImmutableSeq.CreateRange(range);
         //
@@ -27,16 +28,19 @@ public static class Program {
         //     _ = immutableSeq[i];
         //     _ = immutableSeq[count - i - 1];
         // }
-        // //
-        // // var count = 1000000;
-        // // var range = Enumerable.Range(0, count);
-        // // var immutableSeq = ImmutableSeq.CreateRange(range);
-        // //
-        // // for (var i = 0; i < count; ++i) {
-        // //     //immutableSeq = immutableSeq.Insert(immutableSeq.Count, i);
-        // //     // TODO: optimize this worst case somehow
-        // //     immutableSeq = immutableSeq.Insert(i/2, i);
-        // // }
+        
+        // var sw = Stopwatch.StartNew();
+        // var count = 1000000;
+        //
+        // var range = Enumerable.Range(0, count);
+        // var immutableSeq = FTrees.ImmutableSeq.CreateRange(range);
+        //
+        // //for (var rep = 0; rep < 10; rep++) // reduce impact of CreateRange
+        // for (var i = 0; i < count; ++i) {
+        //     //immutableSeq = immutableSeq.Insert(immutableSeq.Count, i);
+        //     // TODO: optimize this worst case somehow
+        //     Use(immutableSeq.Insert(i/2, i));
+        // }
         //
         // var set = FTrees.ImmutableOrderedSet.CreateRange(Enumerable.Range(0, count));
         //
@@ -46,4 +50,8 @@ public static class Program {
         // sw.Stop();
         // Console.WriteLine(sw.Elapsed);
     }
+
+    // force value to be used
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    private static void Use<T>(T value) { }
 }

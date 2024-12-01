@@ -74,8 +74,16 @@ internal readonly struct Prio<P>(P value) : IFTreeMeasure<Prio<P>>, IComparable<
         
     public static bool operator<=(Prio<P> left, Prio<P> right) => left.CompareTo(right) <= 0;
     public static bool operator>=(Prio<P> left, Prio<P> right) => left.CompareTo(right) >= 0;
-        
-    public static Prio<P> Add(params ReadOnlySpan<Prio<P>> values) {
+
+    public static Prio<P> Add(in Prio<P> a, in Prio<P> b) => a.HasValue
+        ? b.HasValue
+            ? new(a.Value.CompareTo(b.Value) >= 0 ? a.Value : b.Value)
+            : a
+        : b;
+
+    public static Prio<P> Add(in Prio<P> a, in Prio<P> b, in Prio<P> c) => Add(a, Add(b, c));
+
+    public static Prio<P> Add(ReadOnlySpan<Prio<P>> values) {
         Prio<P> result = default;
         var i = 0;
         // step 1: find first result that has value

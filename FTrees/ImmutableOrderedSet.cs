@@ -275,7 +275,10 @@ internal readonly struct Key<T>(T value)
 {
     public readonly T Value = value;
     public readonly bool HasValue = true;
-    
+
+    public static Key<T> Add(in Key<T> a, in Key<T> b) => b.HasValue ? b : a;
+    public static Key<T> Add(in Key<T> a, in Key<T> b, in Key<T> c) => c.HasValue ? c : b.HasValue ? b : a;
+
     public static Key<T> Add(params ReadOnlySpan<Key<T>> values) {
         for (var i = values.Length - 1; i >= 0; --i) {
             ref readonly var curr = ref values[i];

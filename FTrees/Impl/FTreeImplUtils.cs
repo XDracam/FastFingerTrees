@@ -114,14 +114,14 @@ internal static class FTreeImplUtils
         };
         
         static FTree<A, V> prependDigit(Digit<A, V> digit, FTree<A, V> tree) {
-            for (var i = digit.Values.Length - 1; i >= 0; --i) 
-                tree = tree.Prepend(digit.Values[i]);
+            for (var i = digit.Length - 1; i >= 0; --i) 
+                tree = tree.Prepend(digit[i]);
             return tree;
         }
     
         static FTree<A, V> appendDigit(Digit<A, V> digit, FTree<A, V> tree) {
-            for (var i = 0; i < digit.Values.Length; ++i) 
-                tree = tree.Append(digit.Values[i]);
+            for (var i = 0; i < digit.Length; ++i) 
+                tree = tree.Append(digit[i]);
             return tree;
         }
     }
@@ -169,10 +169,10 @@ internal static class FTreeImplUtils
     // digits have at most 4 items, so O(1)
     internal static Triple<A> splitDigit<A, V>(Func<V, bool> p, V i, Digit<A, V> digit) 
     where A : IFTreeElement<V> where V : struct, IFTreeMeasure<V> {
-        if (digit.Values.Length == 1)
+        if (digit.Length == 1)
             return new([], digit.Head, []);
-        for (var idx = 0; idx < digit.Values.Length; ++idx) {
-            i = V.Add(i, digit.Values[idx].Measure);
+        for (var idx = 0; idx < digit.Length; ++idx) {
+            i = V.Add(i, digit[idx].Measure);
             if (p(i)) return split(digit.Values, idx);
         }
         // not found anything, take last element
