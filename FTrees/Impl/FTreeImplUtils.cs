@@ -20,7 +20,7 @@ internal static class FTreeImplUtils
             FTree<Digit<A, V>, V>.EmptyT => 
                 FTree<A, V>.createRangeOptimized(sf.Values),
             FTree<Digit<A, V>, V>.Single(var x) => 
-                new FTree<A, V>.Deep(x, Lazy.From(FTree<Digit<A, V>, V>.Empty), sf),
+                new FTree<A, V>.Deep(x, FTree<Digit<A, V>, V>.EmptyT.LazyInstance, sf),
             FTree<Digit<A, V>, V>.Deep d => 
                 new FTree<A, V>.Deep(d.Left.Head, Lazy.From(d => deepL(d.Left.Tail, d.Spine, d.Right), d), sf),
             _ => throw new InvalidOperationException()
@@ -39,7 +39,7 @@ internal static class FTreeImplUtils
             FTree<Digit<A, V>, V>.EmptyT => 
                 FTree<A, V>.createRangeOptimized(pr.Values),
             FTree<Digit<A, V>, V>.Single(var x) => 
-                new FTree<A, V>.Deep(pr, Lazy.From(FTree<Digit<A, V>, V>.Empty), x),
+                new FTree<A, V>.Deep(pr, FTree<Digit<A, V>, V>.EmptyT.LazyInstance, x),
             FTree<Digit<A, V>, V>.Deep d => 
                 new FTree<A, V>.Deep(pr, Lazy.From(d => deepR(d.Left, d.Spine, d.Right.Init), d), d.Right.Last),
             _ => throw new InvalidOperationException()

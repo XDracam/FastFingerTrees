@@ -10,7 +10,10 @@ public abstract partial class FTree<T, V>
     internal sealed class EmptyT : FTree<T, V>
     {
         private EmptyT() { }
+        
         public static readonly EmptyT Instance = new();
+        public static readonly ILazy<EmptyT> LazyInstance = Lazy.From(Instance);
+        
         public override V Measure => default;
 
         internal override View<T, V> toViewL() => new();

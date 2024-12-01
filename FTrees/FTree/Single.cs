@@ -22,14 +22,14 @@ public abstract partial class FTree<T, V>
         public override FTree<T, V> Prepend(T toAdd) => 
             new Deep(
                 new Digit<T, V>(toAdd), 
-                Lazy.From(FTree<Digit<T, V>, V>.EmptyT.Instance), 
+                FTree<Digit<T, V>, V>.EmptyT.LazyInstance, 
                 new Digit<T, V>(Value)
             );
 
         public override FTree<T, V> Append(T toAdd) => 
             new Deep(
                 new Digit<T, V>(Value), 
-                Lazy.From(FTree<Digit<T, V>, V>.EmptyT.Instance), 
+                FTree<Digit<T, V>, V>.EmptyT.LazyInstance, 
                 new Digit<T, V>(toAdd)
             );
 
@@ -40,7 +40,7 @@ public abstract partial class FTree<T, V>
             (Empty, Value, Empty);
         
         public override (ILazy<FTree<T, V>>, T, ILazy<FTree<T, V>>) SplitTreeLazy(Func<V, bool> p, V i) => 
-            (Lazy.From(Empty), Value, Lazy.From(Empty));
+            (EmptyT.LazyInstance, Value, EmptyT.LazyInstance);
 
         public override IEnumerator<T> GetEnumerator() => new SingleEnumerator(Value);
         public override IEnumerator<T> GetReverseEnumerator() => new SingleEnumerator(Value);

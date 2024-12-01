@@ -61,7 +61,7 @@ where T : IFTreeElement<V> where V : struct, IFTreeMeasure<V>
                 var firstDigitLength = length / 2;
                 return new Deep(
                     new Digit<T, V>(array[..firstDigitLength]), 
-                    Lazy.From(FTree<Digit<T, V>, V>.EmptyT.Instance), 
+                    FTree<Digit<T, V>, V>.EmptyT.LazyInstance, 
                     new Digit<T, V>(array[firstDigitLength..])
                 );
             default:
@@ -107,12 +107,12 @@ where T : IFTreeElement<V> where V : struct, IFTreeMeasure<V>
     }
     
     public (ILazy<FTree<T, V>>, ILazy<FTree<T, V>>) SplitLazy(Func<V, bool> p) {
-        if (this is EmptyT) return (Lazy.From(Empty), Lazy.From(Empty));
+        if (this is EmptyT) return (EmptyT.LazyInstance, EmptyT.LazyInstance);
         if (p(Measure)) {
             var (l, x, r) = SplitTreeLazy(p, new());
             return (l, Lazy.From((r, x) => r.Value.Prepend(x), r, x));
         }
-        return (Lazy.From(this), Lazy.From(Empty));
+        return (Lazy.From(this), EmptyT.LazyInstance);
     }
 
     public FTree<T, V> TakeUntil(Func<V, bool> p) => SplitLazy(p).Item1.Value;
