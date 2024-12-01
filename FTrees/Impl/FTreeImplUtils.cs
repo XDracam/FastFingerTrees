@@ -10,13 +10,13 @@ internal static class FTreeImplUtils
     
     internal static FTree<A, V> deepL<A, V>(
         ReadOnlySpan<A> pr, 
-        ILazy<FTree<Digit<A, V>, V>> m, 
+        FTree<Digit<A, V>, V> m, 
         Digit<A, V> sf
     ) where A : IFTreeElement<V> where V : struct, IFTreeMeasure<V> {
         if (pr.Length > 0) 
-            return new FTree<A, V>.Deep(new(pr), m, sf);
+            return new FTree<A, V>.Deep(new(pr), Lazy.From(m), sf);
         
-        return m.Value switch {
+        return m switch {
             FTree<Digit<A, V>, V>.EmptyT => 
                 FTree<A, V>.createRangeOptimized(sf.Values),
             FTree<Digit<A, V>, V>.Single(var x) => 
@@ -29,13 +29,13 @@ internal static class FTreeImplUtils
     
     internal static FTree<A, V> deepR<A, V>(
         Digit<A, V> pr,
-        ILazy<FTree<Digit<A, V>, V>> m, 
+        FTree<Digit<A, V>, V> m, 
         ReadOnlySpan<A> sf
     ) where A : IFTreeElement<V> where V : struct, IFTreeMeasure<V> {
         if (sf.Length > 0) 
-            return new FTree<A, V>.Deep(pr, m, new(sf));
+            return new FTree<A, V>.Deep(pr, Lazy.From(m), new(sf));
         
-        return m.Value switch {
+        return m switch {
             FTree<Digit<A, V>, V>.EmptyT => 
                 FTree<A, V>.createRangeOptimized(pr.Values),
             FTree<Digit<A, V>, V>.Single(var x) => 
@@ -57,11 +57,11 @@ internal static class FTreeImplUtils
                 new FTree<A, V>.Deep(
                     d1.Left,
                     Lazy.From((d1, d2) => app3(
-                        d1.Spine.Value,
+                        d1.Spine,
                         new Digit<Digit<A, V>, V>(
                             // TODO: this allocates log n arrays - can we get rid of that?
                             nodes<A, V>(concat(d1.Right.Values, ReadOnlySpan<A>.Empty, d2.Left.Values))), 
-                        d2.Spine.Value
+                        d2.Spine
                     ), d1, d2),
                     d2.Right
                 ),
@@ -83,9 +83,9 @@ internal static class FTreeImplUtils
                 new FTree<A, V>.Deep(
                     d1.Left,
                     Lazy.From((d1, d2, ts) => app3(
-                        d1.Spine.Value,
+                        d1.Spine,
                         new Digit<Digit<A, V>, V>(nodes<A, V>(concat(d1.Right.Values, ts.Values, d2.Left.Values))), 
-                        d2.Spine.Value
+                        d2.Spine
                     ), d1, d2, ts),
                     d2.Right
                 ),

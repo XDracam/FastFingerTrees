@@ -49,32 +49,31 @@ where T : IFTreeElement<V> where V : struct, IFTreeMeasure<V>
     public static FTree<T, V> CreateRange(ReadOnlySpan<T> values) =>
         createRangeOptimized(values);
     
-    internal static FTree<T, V> createRangeOptimized(ReadOnlySpan<T> array) {
-        var length = array.Length;
+    internal static FTree<T, V> createRangeOptimized(ReadOnlySpan<T> span) {
+        var length = span.Length;
         switch (length) {
             case 0:
                 return EmptyT.Instance;
             case 1:
-                return new Single(array[0]);
+                return new Single(span[0]);
             case <= 8:
                 // Create a digit directly if possible
                 var firstDigitLength = length / 2;
                 return new Deep(
-                    new Digit<T, V>(array[..firstDigitLength]), 
+                    new Digit<T, V>(span[..firstDigitLength]), 
                     FTree<Digit<T, V>, V>.EmptyT.LazyInstance, 
-                    new Digit<T, V>(array[firstDigitLength..])
+                    new Digit<T, V>(span[firstDigitLength..])
                 );
             default:
                 // This case only happens in CreateRange
-                var leftDigit = new Digit<T, V>(array[..3]);
-                var rightDigit = new Digit<T, V>(array[^3..]);
+                var leftDigit = new Digit<T, V>(span[..3]);
+                var rightDigit = new Digit<T, V>(span[^3..]);
 
-                var arrForDigits = array[3..^3].ToArray();
                 // Note: node needs 2 or 3 elements
                 return new Deep(
                     leftDigit, 
-                    // TODO: this allocates log n arrays - can we get rid of that?
-                    Lazy.From(arr => FTree<Digit<T, V>, V>.createRangeOptimized(nodes<T, V>(arr)), arrForDigits),
+                    // Note: Eager to save a ton of array allocations that won't be necessary
+                    Lazy.From(FTree<Digit<T, V>, V>.createRangeOptimized(nodes<T, V>(span[3..^3]))),
                     rightDigit
                 );
         }
