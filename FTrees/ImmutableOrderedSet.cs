@@ -92,7 +92,7 @@ public readonly struct ImmutableOrderedSet<T> : IImmutableSet<T> where T : IComp
             if (xs.IsEmpty) return ys;
             if (ys.IsEmpty) return xs;
                 
-            var view = FTreeImplUtils.toViewL(ys);
+            var view = ys.toViewL();
                 
             // ReSharper disable once AccessToModifiedClosure // false positive
             var (l, x, r) = xs.SplitTree(x => x >= view.Head.Measure, new());

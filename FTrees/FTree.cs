@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using DracTec.FTrees.Impl;
 
 namespace DracTec.FTrees;
@@ -26,7 +27,7 @@ public interface IFTreeElement<V> where V : struct, IFTreeMeasure<V> { V Measure
 /// <remarks> 
 /// Based on https://www.staff.city.ac.uk/~ross/papers/FingerTree.pdf
 /// </remarks>
-public abstract class FTree<T, V> : IEnumerable<T>, IFTreeElement<V>
+public abstract partial class FTree<T, V> : IEnumerable<T>, IFTreeElement<V>
 where T : IFTreeElement<V> where V : struct, IFTreeMeasure<V>
 {
     private FTree() { } // only allow nested types to inherit
@@ -35,103 +36,14 @@ where T : IFTreeElement<V> where V : struct, IFTreeMeasure<V>
     
     public abstract V Measure { get; }
 
-    internal sealed class EmptyT : FTree<T, V>
-    {
-        private EmptyT() { }
-        public static readonly EmptyT Instance = new();
-        public override V Measure => default;
-    }
+    internal abstract View<T, V> toViewL();
+    internal abstract View<T, V> toViewR();
     
-    internal sealed class Single(T value) : FTree<T, V>
-    {
-        public readonly T Value = value;
-        public void Deconstruct(out T value) { value = Value; }
-        public override V Measure => Value.Measure;
-    }
-
-    internal sealed class Deep(
-        Digit<T, V> left,
-        ILazy<FTree<Digit<T, V>, V>> spine,
-        Digit<T, V> right
-    ) : FTree<T, V>
-    {
-        private V _measure;
-        private bool _hasMeasure;
-        
-        public readonly Digit<T, V> Left = left;
-        public readonly Digit<T, V> Right = right;
-        public readonly ILazy<FTree<Digit<T, V>, V>> Spine = spine;
-
-        public void Deconstruct(
-            out Digit<T, V> left,
-            out ILazy<FTree<Digit<T, V>, V>> outSpine,
-            out Digit<T, V> right
-        ) {
-            left = Left;
-            outSpine = Spine;
-            right = Right;
-        }
-
-        public override V Measure => _hasMeasure ? _measure 
-            : ((_measure, _hasMeasure) = (V.Add(Left.Measure, Spine.Value.Measure, Right.Measure), true))._measure;
-    }
+    public abstract TRes ReduceRight<TRes>(Func<T, TRes, TRes> reduceOp, TRes other);
+    public abstract TRes ReduceLeft<TRes>(Func<TRes, T, TRes> reduceOp, TRes other);
     
-    public TRes ReduceRight<TRes>(Func<T, TRes, TRes> reduceOp, TRes other) => this switch {
-        EmptyT => other,
-        Single(var x) => reduceOp(x, other),
-        Deep(var pr, var m, var sf) => 
-            pr.ReduceRight(
-                reduceOp, 
-                m.Value.ReduceRight(
-                    (a, b) => a.ReduceRight(reduceOp, b), 
-                    sf.ReduceRight(reduceOp, other)
-                )
-            ),
-        _ => throw new InvalidOperationException()
-    };
-    
-    public TRes ReduceLeft<TRes>(Func<TRes, T, TRes> reduceOp, TRes other) => this switch {
-        EmptyT => other,
-        Single(var x) => reduceOp(other, x),
-        Deep(var pr, var m, var sf) => 
-            sf.ReduceLeft(
-                reduceOp, 
-                m.Value.ReduceLeft(
-                    (a, b) => b.ReduceLeft(reduceOp, a), 
-                    pr.ReduceLeft(reduceOp, other)
-                )
-            ),
-        _ => throw new InvalidOperationException()
-    };
-    
-    public FTree<T, V> Prepend(T toAdd) => this switch { // in paper: a <| this
-        EmptyT => new Single(toAdd),
-        Single(var x) => new Deep(
-            new Digit<T, V>(toAdd), 
-            Lazy.From(FTree<Digit<T, V>, V>.EmptyT.Instance), 
-            new Digit<T, V>(x)),
-        Deep({Length: 4} l, var m, var sf) => 
-            new Deep(
-                new Digit<T, V>(toAdd, l[0]), 
-                Lazy.From((m, l) => m.Value.Prepend(new Digit<T, V>(l[1], l[2], l[3])), m, l), 
-                sf),
-        Deep(var pr, var m, var sf) => new Deep(pr.Prepend(toAdd), m, sf),
-        _ => throw new InvalidOperationException()
-    };
-    
-    public FTree<T, V> Append(T toAdd) => this switch { // in paper: this |> a
-        EmptyT => new Single(toAdd),
-        Single(var x) => new Deep(
-            new Digit<T, V>(x), 
-            Lazy.From(FTree<Digit<T, V>, V>.EmptyT.Instance), 
-            new Digit<T, V>(toAdd)),
-        Deep(var pr, var m, {Length: 4} r) => 
-            new Deep(pr, 
-                Lazy.From((m, r) => m.Value.Append(new Digit<T, V>(r[0], r[1], r[2])), m, r), 
-                new Digit<T, V>(r[3], toAdd)),
-        Deep(var pr, var m, var sf) => new Deep(pr, m, sf.Append(toAdd)),
-        _ => throw new InvalidOperationException()
-    };
+    public abstract FTree<T, V> Prepend(T toAdd);
+    public abstract FTree<T, V> Append(T toAdd);
 
     public static FTree<T, V> Create(params ReadOnlySpan<T> values) => 
         CreateRange(values);
@@ -171,92 +83,21 @@ where T : IFTreeElement<V> where V : struct, IFTreeMeasure<V>
     }
 
     public bool IsEmpty => this is EmptyT;
-    
-    public ref readonly T Head {
-        get {
-            if (this is Single s) return ref s.Value;
-            if (this is Deep d) return ref d.Left.Head;
-            throw new InvalidOperationException();
-        }
-    }
 
-    public FTree<T, V> Tail => toViewL(this).Tail;
-    
-    public ref readonly T Last {
-        get {
-            if (this is Single s) return ref s.Value;
-            if (this is Deep d) return ref d.Right.Last;
-            throw new InvalidOperationException();
-        }
-    }
-    
-    public FTree<T, V> Init => toViewR(this).Tail;
+    public abstract ref readonly T Head { get; } 
+    public abstract ref readonly T Last { get; }
+
+    public FTree<T, V> Tail => toViewL().Tail;
+    public FTree<T, V> Init => toViewR().Tail;
 
     // in paper: |><| (wtf)
     public FTree<T, V> Concat(FTree<T, V> other) => app2(this, other);
     
     // guaranteed to be O(logn)
-    public (FTree<T, V>, T, FTree<T, V>) SplitTree(Func<V, bool> p, V i) {
-        switch (this) {
-            case Single(var s): 
-                return (Empty, s, Empty);
-            case Deep(var pr, var m, var sf): 
-                var vpr = V.Add(i, pr.Measure);
-                if (p(vpr)) {
-                    var (l, x, r) = splitDigit(p, i, pr);
-                    return (createRangeOptimized(l), x, deepL(r, m, sf));
-                }
-                var vm = V.Add(vpr, m.Value.Measure);
-                if (p(vm)) {
-                    var (ml, xs, mr) = m.Value.SplitTree(p, vpr);
-                    var (l, x, r) = splitDigit(p, V.Add(vpr, ml.Measure), xs);
-                    return (deepR(pr, Lazy.From(ml), l), x, deepL(r, Lazy.From(mr), sf));
-                }
-                else {
-                    var (l, x, r) = splitDigit(p, vm, sf);
-                    return (deepR(pr, m, l), x, createRangeOptimized(r));
-                }
-            default: throw new InvalidOperationException("Cannot split an empty FTree");
-        }
-    }
+    public abstract (FTree<T, V>, T, FTree<T, V>) SplitTree(Func<V, bool> p, V i);
     
     // guaranteed to be O(logn)
-    public (ILazy<FTree<T, V>>, T, ILazy<FTree<T, V>>) SplitTreeLazy(Func<V, bool> p, V i) {
-        switch (this) {
-            case Single(var s): 
-                return (Lazy.From(Empty), s, Lazy.From(Empty));
-            case Deep(var pr, var m, var sf): 
-                // TODO: eliminate unnecessary .ToArray()?
-                var vpr = V.Add(i, pr.Measure);
-                if (p(vpr)) {
-                    var (l, x, r) = splitDigit(p, i, pr);
-                    // top level digits have up to 4 elements, no need for lazy alloc
-                    return (
-                        Lazy.From(l => createRangeOptimized(l), l.ToArray()), 
-                        x, 
-                        Lazy.From((r, m, sf) => deepL(r, m, sf), r.ToArray(), m, sf)
-                    );
-                }
-                var vm = V.Add(vpr, m.Value.Measure);
-                if (p(vm)) {
-                    var (ml, xs, mr) = m.Value.SplitTreeLazy(p, vpr);
-                    var (l, x, r) = splitDigit(p, V.Add(vpr, ml.Value.Measure), xs);
-                    return (
-                        Lazy.From((pr, ml, l) => deepR(pr, ml, l), pr, ml, l.ToArray()), 
-                        x, 
-                        Lazy.From((r, mr, sf) => deepL(r, mr, sf), r.ToArray(), mr, sf)
-                    );
-                } else {
-                    var (l, x, r) = splitDigit(p, vm, sf);
-                    return (
-                        Lazy.From((pr, m, l) => deepR(pr, m, l), pr, m, l.ToArray()), 
-                        x, 
-                        Lazy.From(r => createRangeOptimized(r), r.ToArray())
-                    );
-                }
-            default: throw new InvalidOperationException("Cannot split an empty FTree");
-        }
-    }
+    public abstract (ILazy<FTree<T, V>>, T, ILazy<FTree<T, V>>) SplitTreeLazy(Func<V, bool> p, V i);
 
     public (FTree<T, V>, FTree<T, V>) Split(Func<V, bool> p) {
         if (this is EmptyT) return (Empty, Empty);
@@ -280,36 +121,11 @@ where T : IFTreeElement<V> where V : struct, IFTreeMeasure<V>
     public FTree<T, V> DropUntil(Func<V, bool> p) => SplitLazy(p).Item2.Value;
 
     IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
+
+    public abstract IEnumerator<T> GetEnumerator();
+    public abstract IEnumerator<T> GetReverseEnumerator();
+
     
-    public IEnumerator<T> GetEnumerator() {
-        if (this is EmptyT) yield break;
-        else if (this is Single(var x)) 
-            yield return x;
-        else if (this is Deep(var pr, var m, var sf)) {
-            foreach (var elem in pr) 
-                yield return elem;
-            foreach (var node in m.Value)
-            foreach (var nodeValue in node) 
-                yield return nodeValue;
-            foreach (var elem in sf) 
-                yield return elem;
-        }
-    }
+
     
-    public IEnumerator<T> GetReverseEnumerator() {
-        if (this is EmptyT) yield break;
-        else if (this is Single(var x)) yield return x;
-        else if (this is Deep(var pr, var m, var sf)) {
-            for (var i = sf.Length - 1; i >= 0; --i) 
-                yield return sf[i];
-            var it = m.Value.GetReverseEnumerator();
-            while (it.MoveNext()) {
-                var node = it.Current;
-                foreach (var nodeElem in node!) 
-                    yield return nodeElem;
-            }
-            for (var i = pr.Length - 1; i >= 0; --i) 
-                yield return pr[i];
-        }
-    }
 }

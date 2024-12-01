@@ -53,7 +53,7 @@ public readonly struct ImmutableIntervalTree<T, P> where P : IComparable<P>
             FTree<Interval<T, P>, KeyPrio<P>> xs, 
             FTree<Interval<T, P>, KeyPrio<P>> ys
         ) {
-            var view = FTreeImplUtils.toViewL(ys);
+            var view = ys.toViewL();
             if (!view.IsCons) return xs;
             // ReSharper disable once AccessToModifiedClosure // false positive
             var (l, r) = xs.Split(x => x.Key > view.Head.measure.Key);
@@ -72,7 +72,7 @@ public readonly struct ImmutableIntervalTree<T, P> where P : IComparable<P>
         return matches(backing.TakeUntil(x => x.Greater(high)));
             
         ImmutableStack<Interval<T, P>> matches(FTree<Interval<T, P>, KeyPrio<P>> xs) {
-            var view = FTreeImplUtils.toViewL(xs.DropUntil(x => x.AtLeast(low)));
+            var view = xs.DropUntil(x => x.AtLeast(low)).toViewL();
             if (!view.IsCons) return ImmutableStack<Interval<T, P>>.Empty;
             return matches(view.Tail).Push(view.Head);
         }

@@ -8,16 +8,6 @@ internal static class FTreeImplUtils
 {
     // ReSharper disable VariableHidesOuterVariable
     
-    internal static View<A, V> toViewL<A, V>(FTree<A, V> self) 
-    where A : IFTreeElement<V> where V : struct, IFTreeMeasure<V> {
-        return self switch {
-            FTree<A, V>.EmptyT => new View<A, V>(),
-            FTree<A, V>.Single(var x) => new View<A, V>(x, FTree<A, V>.EmptyT.Instance),
-            FTree<A, V>.Deep(var pr, var m, var sf) => new View<A, V>(pr.Head, deepL(pr.Tail, m, sf)),
-            _ => throw new InvalidOperationException()
-        };
-    }
-    
     internal static FTree<A, V> deepL<A, V>(
         ReadOnlySpan<A> pr, 
         ILazy<FTree<Digit<A, V>, V>> m, 
@@ -33,17 +23,6 @@ internal static class FTreeImplUtils
                 new FTree<A, V>.Deep(x, Lazy.From(FTree<Digit<A, V>, V>.Empty), sf),
             FTree<Digit<A, V>, V>.Deep d => 
                 new FTree<A, V>.Deep(d.Left.Head, Lazy.From(d => deepL(d.Left.Tail, d.Spine, d.Right), d), sf),
-            _ => throw new InvalidOperationException()
-        };
-    }
-    
-    
-    internal static View<A, V> toViewR<A, V>(FTree<A, V> self) 
-    where A : IFTreeElement<V> where V : struct, IFTreeMeasure<V> {
-        return self switch {
-            FTree<A, V>.EmptyT => new View<A, V>(),
-            FTree<A, V>.Single(var x) => new View<A, V>(x, FTree<A, V>.EmptyT.Instance),
-            FTree<A, V>.Deep(var pr, var m, var sf) => new View<A, V>(sf.Last, deepR(pr, m, sf.Init)),
             _ => throw new InvalidOperationException()
         };
     }
@@ -72,8 +51,8 @@ internal static class FTreeImplUtils
         return (self, other) switch {
             (FTree<A, V>.EmptyT, var xs) => xs,
             (var xs, FTree<A, V>.EmptyT) => xs,
-            (FTree<A, V>.Single(var x), var xs) => xs.Prepend(x),
-            (var xs, FTree<A, V>.Single(var x)) => xs.Append(x),
+            (FTree<A, V>.Single s, var xs) => xs.Prepend(s.Value),
+            (var xs, FTree<A, V>.Single s) => xs.Append(s.Value),
             (FTree<A, V>.Deep d1, FTree<A, V>.Deep d2) => 
                 new FTree<A, V>.Deep(
                     d1.Left,
@@ -98,8 +77,8 @@ internal static class FTreeImplUtils
         return (self, other) switch {
             (FTree<A, V>.EmptyT, var xs) => prependDigit(ts, xs),
             (var xs, FTree<A, V>.EmptyT) => appendDigit(ts, xs),
-            (FTree<A, V>.Single(var x), var xs) => prependDigit(ts, xs).Prepend(x),
-            (var xs, FTree<A, V>.Single(var x)) => appendDigit(ts, xs).Append(x),
+            (FTree<A, V>.Single s, var xs) => prependDigit(ts, xs).Prepend(s.Value),
+            (var xs, FTree<A, V>.Single s) => appendDigit(ts, xs).Append(s.Value),
             (FTree<A, V>.Deep d1, FTree<A, V>.Deep d2) => 
                 new FTree<A, V>.Deep(
                     d1.Left,
